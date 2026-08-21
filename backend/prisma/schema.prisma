@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  passwordHash  String
+  fullName      String
+  role          String          @default("STUDENT")
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  profile       StudentProfile?
+  chatHistories ChatHistory[]
+  documents     Document[]
+  quizSubmissions QuizSubmission[]
+  skills        Skill[]
+  projects      Project[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model StudentProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  university     String
+  degree         String
+  branch         String
+  semester       Int
+  section        String?
+  graduationYear Int
+  phone          String?
+  profilePicture String?
+  bio            String?
+  githubUrl      String?
+  linkedinUrl    String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("student_profiles")
+}
+
+model Subject {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  university  String
+  branch      String
+  semester    Int
+  description String?
+  
+  resources   StudyResource[]
+  quizzes     Quiz[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("subjects")
+}
+
+model StudyResource {
+  id           String       @id @default(uuid())
+  title        String
+  description  String?
+  subjectId    String
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  moduleNumber Int
+  type         String       // PDF_NOTES, PPT, TUTORIAL, PREVIOUS_PAPER, LAB_MANUAL, CODING_EXERCISE
+  driveUrl     String       // Google Drive shareable link
+  fileSize     String?
+  uploadedBy   String
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("study_resources")
+}
+
+model Quiz {
+  id           String         @id @default(uuid())
+  title        String
+  description  String?
+  subjectId    String
+  subject      Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  moduleNumber Int?
+  timeLimitMin Int?
+  totalMarks   Int
+  
+  questions    QuizQuestion[]
+  submissions  QuizSubmission[]
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id            String   @id @default(uuid())
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  questionText  String
+  options       String   // JSON stringified array of options
+  correctOption Int      // 0-indexed
+  explanation   String?
+
+  @@map("quiz_questions")
+}
+
+model QuizSubmission {
+  id           String   @id @default(uuid())
+  quizId       String
+  quiz         Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score        Int
+  totalMarks   Int
+  answers      String   // JSON stringified answers
+  submittedAt  DateTime @default(now())
+
+  @@map("quiz_submissions")
+}
+
+model ChatHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject      String?
+  question     String
+  answer       String
+  isBookmarked Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@map("chat_histories")
+}
+
+model Document {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  type        String       // RESUME, CERTIFICATE, MARKS_CARD, INTERNSHIP_CERTIFICATE
+  fileUrl     String       // Firebase Storage URL
+  storagePath String       // Firebase path
+  fileSize    Int
+  mimeType    String
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("documents")
+}
+
+model Skill {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  category    String?
+  proficiency String?  // Beginner, Intermediate, Advanced
+
+  createdAt   DateTime @default(now())
+
+  @@map("skills")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  techStack   String   // JSON stringified array
+  githubUrl   String?
+  liveUrl     String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model Internship {
+  id          String   @id @default(uuid())
+  title       String
+  company     String
+  location    String
+  stipend     String?
+  duration    String
+  applyUrl    String
+  description String
+  deadline    DateTime?
+  status      String   @default("ACTIVE")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("internships")
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  title       String
+  company     String
+  location    String
+  package     String?
+  applyUrl    String
+  description String
+  deadline    DateTime?
+  status      String   @default("ACTIVE")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("jobs")
+}
+
+model GovernmentExam {
+  id          String   @id @default(uuid())
+  title       String
+  organizer   String
+  eligibility String
+  examDate    DateTime?
+  applyUrl    String
+  description String
+  status      String   @default("ACTIVE")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("government_exams")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?  // null means broadcast to all users
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // ACADEMIC, QUIZ, CAREER, GENERAL
+  isRead    Boolean  @default(false)
+  linkUrl   String?
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  ipAddress String?
+  details   String?
+
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}

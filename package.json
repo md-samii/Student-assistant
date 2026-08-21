@@ -1,0 +1,27 @@
+{
+  "name": "ai-student-assistant-platform",
+  "version": "1.0.0",
+  "description": "AI Student Assistant Platform - Personalized Academic & Career Companion",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "install:all": "npm install"
+  },
+  "keywords": [
+    "education",
+    "ai",
+    "react",
+    "express",
+    "typescript",
+    "prisma"
+  ],
+  "author": "",
+  "license": "ISC"
+}
