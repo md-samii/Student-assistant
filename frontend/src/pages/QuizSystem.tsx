@@ -124,47 +124,50 @@ export default function QuizSystem() {
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Header Banner */}
-      <div className="eduflow-card p-8 bg-gradient-to-r from-white via-[#f0f3ff] to-[#e7eeff] border border-[#c4c6d1]/40 relative overflow-hidden">
+      <div className="stitch-card p-6 sm:p-8 bg-white border border-[#e2e8e2] relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#052659]/10 text-[#052659] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#30618f]" /> Practice & Self-Assessment • Sem {profile?.semester || 6}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Adaptive Assessment • Sem {profile?.semester || 6}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#001234] font-sans">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">
               Module Practice Quizzes
             </h1>
-            <p className="text-[#44474f] text-xs font-mono mt-1">
-              Timed multiple choice questions, instant feedback, and detailed explanations for {profile?.branch || 'Computer Science'}
+            <p className="text-[#404942] text-xs sm:text-sm mt-1">
+              Timed multiple choice questions, instant grading, and detailed explanations for {profile?.branch || 'Computer Science'}.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#c4c6d1]/40 text-xs font-mono text-[#052659] shrink-0">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f0f9f4] border border-[#c0c9bf]/60 text-xs font-semibold text-[#134e2f] shrink-0">
             <Trophy className="w-4 h-4 text-amber-500" />
-            <span>Automatic Scoring Active</span>
+            <span>Automated Scoring Active</span>
           </div>
         </div>
       </div>
 
       {/* Subject Filter Pills */}
       {!activeQuiz && (
-        <div className="eduflow-card p-6 space-y-4">
+        <div className="stitch-card p-5 space-y-3">
+          <div className="text-xs font-bold text-[#404942] uppercase tracking-wider">
+            Filter by Coursework:
+          </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {subjectsList.map((s) => (
               <button
                 key={s.code}
                 onClick={() => setSelectedSubject(s.name)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold font-sans whitespace-nowrap transition ${
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                   selectedSubject === s.name
-                    ? 'bg-[#052659] text-white shadow-md shadow-[#052659]/20'
-                    : 'bg-[#f0f3ff] text-[#44474f] hover:text-[#001234] border border-[#c4c6d1]/30'
+                    ? 'bg-[#134e2f] text-white shadow-sm'
+                    : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
                 }`}
               >
                 {s.code} — {s.name}
@@ -179,56 +182,56 @@ export default function QuizSystem() {
         isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2].map((i) => (
-              <div key={i} className="h-44 rounded-2xl bg-[#e7eeff]/40 animate-pulse border border-[#c4c6d1]/30"></div>
+              <div key={i} className="h-44 rounded-3xl bg-white animate-pulse border border-[#e2e8e2]"></div>
             ))}
           </div>
         ) : quizzes.length === 0 ? (
-          <div className="eduflow-card p-12 text-center space-y-3">
-            <Award className="w-8 h-8 text-[#747780] mx-auto" />
-            <h3 className="font-bold text-[#001234] text-base">No Quizzes Available</h3>
-            <p className="text-xs text-[#747780] font-mono">Select another subject above to view practice tests.</p>
+          <div className="stitch-card p-12 text-center space-y-3">
+            <Award className="w-10 h-10 text-gray-300 mx-auto" />
+            <h3 className="font-bold text-[#181c1b] text-base">No Quizzes Available</h3>
+            <p className="text-xs text-[#404942]">Select another subject above to view practice tests.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {quizzes.map((q) => (
               <div
                 key={q.id}
-                className="eduflow-card p-6 flex flex-col justify-between space-y-5 group"
+                className="stitch-card p-6 flex flex-col justify-between space-y-4 group hover:translate-y-[-2px]"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="eduflow-pill bg-[#052659]/10 text-[#052659]">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-bold font-mono">
                       {q.subjectCode}
                     </span>
-                    <span className="text-[11px] font-mono font-bold text-[#747780]">
+                    <span className="text-xs font-semibold text-[#404942]">
                       Module {q.moduleNumber}
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-lg text-[#001234] group-hover:text-[#30618f] transition font-sans">
+                  <h3 className="font-bold text-base text-[#181c1b] group-hover:text-[#134e2f] transition">
                     {q.title}
                   </h3>
 
-                  <p className="text-xs text-[#44474f] leading-relaxed line-clamp-2">
+                  <p className="text-xs text-[#404942] leading-relaxed line-clamp-2">
                     {q.description}
                   </p>
 
-                  <div className="flex items-center gap-4 text-xs font-mono text-[#747780]">
+                  <div className="flex items-center gap-4 text-xs text-[#404942]">
                     <span className="flex items-center gap-1">
-                      <HelpCircle className="w-3.5 h-3.5 text-[#30618f]" /> {q.questionsCount} Questions
+                      <HelpCircle className="w-3.5 h-3.5 text-[#006d3d]" /> {q.questionsCount} Questions
                     </span>
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-rose-600" /> {q.timeLimitMin} Mins
+                      <Clock className="w-3.5 h-3.5 text-rose-500" /> {q.timeLimitMin} Mins
                     </span>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#e2e8f0] flex items-center justify-between">
-                  <span className="text-xs font-mono text-[#747780]">Total: {q.totalMarks} Marks</span>
+                <div className="pt-4 border-t border-[#e2e8e2] flex items-center justify-between">
+                  <span className="text-xs text-[#404942] font-semibold">Total: {q.totalMarks} Marks</span>
 
                   <button
                     onClick={() => handleStartQuiz(q.id)}
-                    className="px-5 py-2 rounded-xl bg-[#052659] hover:bg-[#30618f] text-white font-bold text-xs transition shadow-md shadow-[#052659]/20 flex items-center gap-1.5"
+                    className="stitch-btn-primary"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>Start Test</span>
@@ -242,22 +245,22 @@ export default function QuizSystem() {
 
       {/* Active Quiz Test Runner */}
       {activeQuiz && (
-        <div className="eduflow-card p-6 sm:p-8 space-y-6 bg-white border border-[#c4c6d1]">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#e2e8f0] pb-4">
+        <div className="stitch-card p-6 sm:p-8 space-y-6 bg-white">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#e2e8e2] pb-4">
             <div>
-              <span className="eduflow-pill bg-[#052659]/10 text-[#052659] mb-1 inline-block">
+              <span className="inline-block px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-bold font-mono mb-1">
                 {activeQuiz.subjectName}
               </span>
-              <h2 className="text-xl font-bold text-[#001234] font-sans">{activeQuiz.title}</h2>
+              <h2 className="text-xl font-bold text-[#181c1b]">{activeQuiz.title}</h2>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 text-xs font-mono font-bold flex items-center gap-1.5">
+              <div className="px-4 py-2 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono font-bold flex items-center gap-1.5">
                 <Clock className="w-4 h-4" /> Time Left: {formatTime(timeLeft)}
               </div>
               <button
                 onClick={() => setActiveQuiz(null)}
-                className="p-2 rounded-xl bg-[#f0f3ff] text-[#747780] hover:text-[#001234]"
+                className="p-2 rounded-full bg-[#f0f4f0] text-[#404942] hover:text-[#181c1b]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -265,15 +268,15 @@ export default function QuizSystem() {
           </div>
 
           {/* Question Stepper Header */}
-          <div className="flex items-center justify-between text-xs font-mono font-bold text-[#747780]">
+          <div className="flex items-center justify-between text-xs font-semibold text-[#404942]">
             <span>Question {currentQIndex + 1} of {activeQuiz.questions.length}</span>
             <span>Marks: 1 Per Question</span>
           </div>
 
           {/* Question Body */}
           {activeQuiz.questions[currentQIndex] && (
-            <div className="space-y-6">
-              <h3 className="text-base font-bold text-[#001234] font-sans leading-relaxed p-4 rounded-xl bg-[#f0f3ff] border border-[#c4c6d1]/30">
+            <div className="space-y-5">
+              <h3 className="text-base font-bold text-[#181c1b] leading-relaxed p-4 rounded-2xl bg-[#f7faf7] border border-[#e2e8e2]">
                 {activeQuiz.questions[currentQIndex].questionText}
               </h3>
 
@@ -284,15 +287,15 @@ export default function QuizSystem() {
                     <button
                       key={idx}
                       onClick={() => handleSelectOption(activeQuiz.questions[currentQIndex].id, idx)}
-                      className={`w-full p-4 rounded-xl border text-left text-xs font-semibold font-sans transition flex items-center justify-between ${
+                      className={`w-full p-4 rounded-2xl border text-left text-xs font-semibold transition flex items-center justify-between ${
                         isSelected
-                          ? 'bg-[#052659] text-white border-[#052659] shadow-md shadow-[#052659]/15'
-                          : 'bg-white text-[#001234] border-[#c4c6d1]/40 hover:border-[#9ccafe]'
+                          ? 'bg-[#134e2f] text-white border-[#134e2f] shadow-sm'
+                          : 'bg-white text-[#181c1b] border-[#c0c9bf] hover:border-[#134e2f] hover:bg-[#f0f9f4]'
                       }`}
                     >
                       <span className="flex items-center gap-3">
-                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-mono font-bold ${
-                          isSelected ? 'bg-white text-[#052659]' : 'bg-[#f0f3ff] text-[#052659]'
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                          isSelected ? 'bg-white text-[#134e2f]' : 'bg-[#e8f5e9] text-[#134e2f]'
                         }`}>
                           {String.fromCharCode(65 + idx)}
                         </span>
@@ -307,11 +310,11 @@ export default function QuizSystem() {
           )}
 
           {/* Controls Footer */}
-          <div className="pt-4 border-t border-[#e2e8f0] flex items-center justify-between">
+          <div className="pt-4 border-t border-[#e2e8e2] flex items-center justify-between">
             <button
               onClick={() => setCurrentQIndex((prev) => Math.max(0, prev - 1))}
               disabled={currentQIndex === 0}
-              className="px-4 py-2 rounded-xl bg-[#f0f3ff] text-[#44474f] font-bold text-xs disabled:opacity-40 flex items-center gap-1"
+              className="stitch-btn-secondary disabled:opacity-40"
             >
               <ArrowLeft className="w-4 h-4" /> Previous
             </button>
@@ -319,7 +322,7 @@ export default function QuizSystem() {
             {currentQIndex < activeQuiz.questions.length - 1 ? (
               <button
                 onClick={() => setCurrentQIndex((prev) => prev + 1)}
-                className="px-5 py-2 rounded-xl bg-[#052659] hover:bg-[#30618f] text-white font-bold text-xs transition flex items-center gap-1"
+                className="stitch-btn-primary"
               >
                 <span>Next Question</span>
                 <ArrowRight className="w-4 h-4" />
@@ -328,7 +331,7 @@ export default function QuizSystem() {
               <button
                 onClick={handleSubmitQuiz}
                 disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md shadow-emerald-600/20 flex items-center gap-1.5"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#006d3d] hover:bg-[#00522d] text-white font-bold text-xs shadow-sm transition active:scale-[0.98]"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>{isSubmitting ? 'Submitting...' : 'Submit Test'}</span>
@@ -340,23 +343,23 @@ export default function QuizSystem() {
 
       {/* Result Display Modal */}
       {resultData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#001234]/60 backdrop-blur-md p-4">
-          <div className="w-full max-w-lg eduflow-card p-8 space-y-6 text-center shadow-2xl bg-white border border-[#c4c6d1]">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md stitch-card p-8 space-y-6 text-center shadow-2xl bg-white animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-[#e8f5e9] text-[#006d3d] flex items-center justify-center mx-auto">
               <Trophy className="w-8 h-8" />
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-2xl font-extrabold text-[#001234] font-sans">Assessment Result</h3>
-              <p className="text-xs text-[#747780] font-mono">{resultData.quizTitle}</p>
+            <div className="space-y-1">
+              <h3 className="text-2xl font-extrabold text-[#181c1b]">Assessment Result</h3>
+              <p className="text-xs text-[#404942]">{resultData.quizTitle}</p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#f0f3ff] border border-[#c4c6d1]/40 space-y-2">
-              <p className="text-xs text-[#44474f] font-mono">Your Score</p>
-              <p className="text-4xl font-extrabold text-[#052659]">
-                {resultData.score} <span className="text-base text-[#747780] font-normal">/ {resultData.totalMarks} Marks</span>
+            <div className="p-6 rounded-2xl bg-[#f7faf7] border border-[#e2e8e2] space-y-2">
+              <p className="text-xs text-[#404942]">Your Score</p>
+              <p className="text-4xl font-extrabold text-[#134e2f]">
+                {resultData.score} <span className="text-base text-[#404942] font-normal">/ {resultData.totalMarks} Marks</span>
               </p>
-              <p className="text-xs font-mono text-emerald-700 font-bold pt-2">
+              <p className="text-xs text-[#006d3d] font-bold pt-1">
                 Percentage: {((resultData.score / resultData.totalMarks) * 100).toFixed(1)}%
               </p>
             </div>
@@ -364,7 +367,7 @@ export default function QuizSystem() {
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => setResultData(null)}
-                className="px-6 py-2.5 rounded-xl bg-[#052659] text-white font-bold text-xs hover:bg-[#30618f] transition shadow-md shadow-[#052659]/20"
+                className="stitch-btn-primary px-8"
               >
                 Back to Quizzes
               </button>

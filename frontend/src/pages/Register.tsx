@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { GraduationCap, Mail, Lock, User as UserIcon, Building2, ArrowRight, AlertCircle, Sparkles, BookOpen } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User as UserIcon, Building2, ArrowRight, AlertCircle, Sparkles, BookOpen, ShieldCheck } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -92,55 +92,56 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-6 animate-fade-in relative">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-purple-600/15 blur-[130px] rounded-full pointer-events-none"></div>
-
-      <main className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 rounded-3xl eduflow-card overflow-hidden border border-slate-800/80 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] relative z-10">
-        {/* Left Side: Graphic & Info */}
-        <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-10 bg-gradient-to-br from-indigo-950/90 via-slate-900 to-[#080c14] text-white relative border-r border-slate-800/80">
+    <div className="min-h-[85vh] flex items-center justify-center py-10 px-4 animate-fade-in relative">
+      <main className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 rounded-[28px] stitch-card overflow-hidden shadow-[0_20px_60px_-15px_rgba(19,78,47,0.08)] bg-white relative z-10">
+        {/* Left Side: Graphic & Branding */}
+        <div className="hidden lg:flex lg:col-span-5 flex-col justify-between p-10 bg-[#134e2f] text-white relative overflow-hidden">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
-              <GraduationCap className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-full bg-white text-[#134e2f] flex items-center justify-center shadow-md font-bold">
+              <GraduationCap className="w-5 h-5" />
             </div>
-            <span className="text-xl font-extrabold font-sans tracking-tight">EduFlow AI</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold tracking-tight text-white leading-none">Student Assistant</span>
+              <span className="text-[11px] text-emerald-200/90 font-medium mt-0.5">Academic & Career Suite</span>
+            </div>
           </div>
 
           <div className="space-y-4 max-w-md my-auto relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Student Account Setup
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-emerald-100 text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-300" /> Student Profile Onboarding
             </div>
-            <h2 className="text-2xl font-extrabold font-sans leading-tight text-white">
+            <h2 className="text-2xl font-extrabold leading-tight text-white tracking-tight">
               Syllabus-Tailored Learning Companion.
             </h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Register with your degree and branch to automatically receive university study materials, practice quizzes, and internship notifications.
+            <p className="text-xs text-emerald-100/85 leading-relaxed">
+              Register with your degree and engineering branch to automatically unlock syllabus notes, module roadmaps, adaptive quizzes, and internship alerts.
             </p>
           </div>
 
-          <div className="pt-6 border-t border-slate-800/80 text-xs text-indigo-300 font-mono flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-indigo-400" /> Personalised Semester Modules
+          <div className="pt-6 border-t border-white/20 text-xs text-emerald-200 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-300" /> Verified Engineering Curriculums
           </div>
         </div>
 
         {/* Right Side: Registration Form */}
-        <div className="lg:col-span-7 flex flex-col justify-center p-8 sm:p-10 bg-[#0d1322]/90 w-full">
+        <div className="lg:col-span-7 flex flex-col justify-center p-8 sm:p-10 bg-white w-full">
           <div className="w-full max-w-xl mx-auto">
             {/* Mobile Header */}
             <div className="lg:hidden flex items-center gap-2.5 mb-6 justify-center">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
-                <GraduationCap className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-full bg-[#134e2f] text-white flex items-center justify-center">
+                <GraduationCap className="w-4 h-4" />
               </div>
-              <span className="font-extrabold text-lg text-white font-sans">EduFlow AI</span>
+              <span className="font-extrabold text-lg text-[#181c1b]">Student Assistant</span>
             </div>
 
             <div className="mb-6 text-center lg:text-left">
-              <h2 className="text-2xl font-extrabold text-white font-sans">Create Student Profile</h2>
-              <p className="text-xs text-slate-400 font-mono mt-1">Get personalized study materials & AI homework guidance</p>
+              <h2 className="text-2xl font-extrabold text-[#181c1b] tracking-tight">Create Student Account</h2>
+              <p className="text-xs text-[#404942] mt-1">Get personalized study materials & AI homework guidance</p>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-3">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
@@ -150,146 +151,163 @@ export default function Register() {
               type="button"
               onClick={handleGoogleRegister}
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 font-semibold text-xs transition flex items-center justify-center gap-3 mb-4 shadow-sm"
+              className="w-full py-2.5 px-4 rounded-full bg-white hover:bg-[#f0f4f0] border border-[#c0c9bf] text-[#181c1b] font-semibold text-xs transition-all flex items-center justify-center gap-3 mb-6 shadow-sm group"
             >
               <GoogleIcon />
               <span>Register with Student Google SSO</span>
             </button>
 
             {/* Divider */}
-            <div className="relative flex items-center justify-center mb-4">
-              <div className="border-t border-slate-800 w-full"></div>
-              <span className="bg-[#0d1322] px-3 text-[10px] font-mono font-bold tracking-widest text-slate-500 uppercase shrink-0">
-                Or fill details
+            <div className="relative flex items-center justify-center mb-6">
+              <div className="border-t border-[#e2e8e2] w-full"></div>
+              <span className="bg-white px-3 text-[10px] font-bold tracking-widest text-[#717971] uppercase shrink-0">
+                Or fill academic profile
               </span>
-              <div className="border-t border-slate-800 w-full"></div>
+              <div className="border-t border-[#e2e8e2] w-full"></div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Credentials */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Name & Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-slate-300 mb-1">Full Name</label>
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">Full Name</label>
                   <div className="relative">
-                    <UserIcon className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <UserIcon className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleChange}
-                      placeholder="Rahul Sharma"
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-indigo-500 text-xs text-white outline-none"
+                      placeholder="e.g. Rahul Sharma"
+                      className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] focus:ring-1 focus:ring-[#134e2f] text-xs text-[#181c1b] outline-none transition"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-slate-300 mb-1">Email Address</label>
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">Email Address</label>
                   <div className="relative">
-                    <Mail className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Mail className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      placeholder="rahul@student.edu"
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-indigo-500 text-xs text-white outline-none"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono font-semibold text-slate-300 mb-1">Password</label>
-                  <div className="relative">
-                    <Lock className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="••••••••"
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-indigo-500 text-xs text-white outline-none"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono font-semibold text-slate-300 mb-1">Confirm Password</label>
-                  <div className="relative">
-                    <Lock className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder="••••••••"
-                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-indigo-500 text-xs text-white outline-none"
+                      placeholder="student@vtu.ac.in"
+                      className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] focus:ring-1 focus:ring-[#134e2f] text-xs text-[#181c1b] outline-none transition"
                       required
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Academic Profile */}
-              <div className="pt-2 border-t border-slate-800 space-y-3">
-                <p className="text-[11px] font-mono font-bold text-indigo-400 uppercase tracking-wider">Academic Details</p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-mono text-slate-300 mb-1">University</label>
-                    <div className="relative">
-                      <Building2 className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        name="university"
-                        value={formData.university}
-                        onChange={handleChange}
-                        className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-indigo-500 text-xs text-white outline-none"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono text-slate-300 mb-1">Branch / Major</label>
-                    <select
-                      name="branch"
-                      value={formData.branch}
+              {/* Passwords */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">Password</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-indigo-500 text-xs text-white outline-none"
-                    >
-                      <option value="Computer Science & Engineering">Computer Science & Engineering</option>
-                      <option value="Information Science & Engineering">Information Science & Engineering</option>
-                      <option value="Electronics & Communication">Electronics & Communication</option>
-                    </select>
+                      placeholder="Min 6 characters"
+                      className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] focus:ring-1 focus:ring-[#134e2f] text-xs text-[#181c1b] outline-none transition"
+                      required
+                    />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-mono text-slate-300 mb-1">Semester</label>
-                    <select
-                      name="semester"
-                      value={formData.semester}
+                <div>
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-indigo-500 text-xs text-white outline-none"
-                    >
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                        <option key={s} value={s}>Semester {s}</option>
-                      ))}
-                    </select>
+                      placeholder="Confirm password"
+                      className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] focus:ring-1 focus:ring-[#134e2f] text-xs text-[#181c1b] outline-none transition"
+                      required
+                    />
                   </div>
+                </div>
+              </div>
+
+              {/* University & Degree */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">University / Board</label>
+                  <input
+                    type="text"
+                    name="university"
+                    value={formData.university}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] text-xs text-[#181c1b] outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">Degree</label>
+                  <select
+                    name="degree"
+                    value={formData.degree}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] text-xs text-[#181c1b] outline-none"
+                  >
+                    <option value="B.E.">B.E. / B.Tech</option>
+                    <option value="M.Tech">M.Tech</option>
+                    <option value="BCA">BCA</option>
+                    <option value="MCA">MCA</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Branch & Semester */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">Branch</label>
+                  <select
+                    name="branch"
+                    value={formData.branch}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] text-xs text-[#181c1b] outline-none"
+                  >
+                    <option value="Computer Science & Engineering">Computer Science & Engineering</option>
+                    <option value="Information Science & Engineering">Information Science & Engineering</option>
+                    <option value="Electronics & Communication Engineering">Electronics & Communication Engineering</option>
+                    <option value="Artificial Intelligence & Machine Learning">AI & Machine Learning</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#181c1b] mb-1">Semester</label>
+                  <select
+                    name="semester"
+                    value={formData.semester}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 rounded-full bg-white border border-[#c0c9bf] focus:border-[#134e2f] text-xs text-[#181c1b] outline-none"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                      <option key={sem} value={sem.toString()}>
+                        Sem {sem}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="btn-shimmer w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+                className="w-full py-3 px-4 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white font-semibold text-xs transition shadow-sm hover:shadow-md flex items-center justify-center gap-2 mt-4 active:scale-[0.98]"
               >
                 {isSubmitting ? (
-                  <span>Registering Profile...</span>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 ) : (
                   <>
                     <span>Complete Registration</span>
@@ -299,10 +317,10 @@ export default function Register() {
               </button>
             </form>
 
-            <div className="mt-4 text-center text-xs text-slate-400">
-              Already registered?{' '}
-              <Link to="/login" className="text-indigo-400 font-bold hover:underline">
-                Sign in
+            <div className="mt-6 text-center text-xs text-[#404942]">
+              Already have an account?{' '}
+              <Link to="/login" className="font-bold text-[#134e2f] hover:underline">
+                Sign In
               </Link>
             </div>
           </div>

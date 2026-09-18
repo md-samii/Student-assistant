@@ -11,6 +11,7 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get('/', getDocuments);
+router.post('/', uploadDocument);
 router.post('/upload', uploadDocument);
 router.delete('/:id', deleteDocument);
 

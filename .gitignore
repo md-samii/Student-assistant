@@ -37,3 +37,6 @@ backend/prisma/*.db
 
 # Temp text extractions
 *.txt
+
+# Design mockups
+stitch-design/

@@ -8,9 +8,11 @@ import {
   CheckCircle2, 
   Award, 
   Users, 
-  Sparkles,
-  PieChart,
-  FileSpreadsheet
+  Sparkles, 
+  PieChart, 
+  FileSpreadsheet,
+  ArrowUpRight,
+  ShieldCheck
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -66,100 +68,149 @@ export const ReportsAnalytics: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      {/* Hero Header */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/80 to-purple-950/80 border border-indigo-500/20 p-8 shadow-[0_15px_40px_-10px_rgba(99,102,241,0.2)] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-semibold">
-            <BarChart3 className="w-3.5 h-3.5 text-indigo-400" /> Platform Insights & Export Engine
+    <div className="space-y-8 animate-fade-in pb-12 font-sans max-w-7xl mx-auto">
+      {/* Header & Control Bar */}
+      <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold uppercase tracking-wider mb-2">
+            <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Telemetry &amp; Institutional Audits
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            Platform Reports & Visual Analytics
+          <h1 className="text-3xl font-extrabold text-[#181c1b] tracking-tight">
+            Institutional Intelligence &amp; Analytics
           </h1>
-          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Monitor real-time student engagement, quiz pass metrics, AI query distribution, and export raw reporting datasets in standard CSV format.
+          <p className="text-sm text-[#404942] max-w-3xl mt-1">
+            Deep telemetry across cohort learning curves, student AI assistant interactions, syllabus mastery indices, and data exports.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
             onClick={handleDownloadStudentsCSV}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition flex items-center gap-2"
+            className="px-4 py-2.5 rounded-full bg-[#f7faf7] hover:bg-[#ecefec] text-[#181c1b] border border-[#c0c9bf] text-xs font-semibold transition flex items-center gap-2"
           >
-            <FileSpreadsheet className="w-4 h-4 text-indigo-400" /> Export Students CSV
+            <FileSpreadsheet className="w-4 h-4 text-[#134e2f]" />
+            <span>Export Scholars CSV</span>
           </button>
           <button
             onClick={handleDownloadQuizzesCSV}
-            className="px-4 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-semibold transition flex items-center gap-2"
+            className="px-4 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-semibold transition shadow-sm flex items-center gap-2 active:scale-95"
           >
-            <Download className="w-4 h-4 text-purple-400" /> Export Quiz Scores CSV
+            <Download className="w-4 h-4 text-[#97f3b5]" />
+            <span>Export Quiz Scores CSV</span>
           </button>
         </div>
       </section>
 
-      {/* Top Overview Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-2">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-mono">
-            <span>Study Notes & Resources</span>
-            <BookOpen className="w-4 h-4 text-indigo-400" />
+      {/* Top 4 Bento Metric Cards */}
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* KPI 1: Featured Dark Green Hero Card */}
+        <div className="rounded-3xl bg-[#134e2f] text-white p-6 flex flex-col justify-between relative overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-white/80 uppercase tracking-wider">Campus AI Interactions</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[#97f3b5] text-[11px] font-bold">Live</span>
           </div>
-          <p className="text-3xl font-extrabold text-white">{data?.overviewTotals.totalResources || 48}</p>
-          <p className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" /> +12% this month
-          </p>
+          <div className="my-3">
+            <div className="text-3xl font-extrabold text-white tracking-tight">{data?.overviewTotals.totalAIChats || 1250}+</div>
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#97f3b5] font-medium">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>+18.6% vs previous term</span>
+            </div>
+          </div>
+          <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden mt-2">
+            <div className="bg-[#97f3b5] h-full rounded-full" style={{ width: '68%' }}></div>
+          </div>
         </div>
 
-        <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-2">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-mono">
-            <span>Total Quiz Submissions</span>
-            <Award className="w-4 h-4 text-emerald-400" />
+        {/* KPI 2: Average Quiz Mastery */}
+        <div className="rounded-3xl bg-white border border-[#e2e8e2] p-6 flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#404942]">Average Assessment Mastery</span>
+            <span className="px-2 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-[10px] font-bold">Top Decile</span>
           </div>
-          <p className="text-3xl font-extrabold text-white">{data?.overviewTotals.totalQuizzes || 15} Active Quizzes</p>
-          <p className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> {data?.quizPassRate.avgScorePercentage || 82}% Avg Pass Rate
-          </p>
+          <div className="my-3">
+            <div className="text-3xl font-extrabold text-[#181c1b] tracking-tight">{data?.quizPassRate.avgScorePercentage || 82}%</div>
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#006d3d] font-semibold">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>+4.2% post-AI study tutor</span>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-[#ecefec] text-xs text-[#717971]">
+            Target Baseline: 75% Exceeded
+          </div>
         </div>
 
-        <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-2">
-          <div className="flex justify-between items-center text-slate-400 text-xs font-mono">
-            <span>AI Assistant Interactions</span>
-            <BrainCircuit className="w-4 h-4 text-purple-400" />
+        {/* KPI 3: Curriculum Resources */}
+        <div className="rounded-3xl bg-white border border-[#e2e8e2] p-6 flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#404942]">Study Notes &amp; Handouts</span>
+            <span className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center text-[#181c1b]">
+              <BookOpen className="w-4 h-4 text-[#006d3d]" />
+            </span>
           </div>
-          <p className="text-3xl font-extrabold text-white">{data?.overviewTotals.totalAIChats || 1250}+ Queries</p>
-          <p className="text-[11px] text-purple-300 font-mono">24/7 Academic Support</p>
+          <div className="my-3">
+            <div className="text-3xl font-extrabold text-[#181c1b] tracking-tight">{data?.overviewTotals.totalResources || 48}</div>
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#006d3d] font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>+12 published this month</span>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-[#ecefec] text-xs text-[#717971]">
+            VTU Syllabus Mapped
+          </div>
+        </div>
+
+        {/* KPI 4: Practice Quizzes */}
+        <div className="rounded-3xl bg-white border border-[#e2e8e2] p-6 flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#404942]">Assessment Sets</span>
+            <span className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center text-[#181c1b]">
+              <Award className="w-4 h-4 text-[#006d3d]" />
+            </span>
+          </div>
+          <div className="my-3">
+            <div className="text-3xl font-extrabold text-[#181c1b] tracking-tight">{data?.overviewTotals.totalQuizzes || 15}</div>
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#404942]">
+              <span>Active Subject Tests</span>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-[#ecefec] text-xs text-[#006d3d] font-semibold">
+            Automated Evaluation Live
+          </div>
         </div>
       </section>
 
       {/* Visual Analytics Grid */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Activity Trend Bar Visual */}
-        <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-indigo-400" /> Weekly Engagement Activity
-            </h3>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+        <div className="p-6 sm:p-8 rounded-3xl bg-white border border-[#e2e8e2] space-y-6 shadow-sm">
+          <div className="flex justify-between items-center border-b border-[#ecefec] pb-4">
+            <div>
+              <h3 className="text-base font-bold text-[#181c1b] flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-[#134e2f]" /> Weekly Student Engagement Activity
+              </h3>
+              <p className="text-xs text-[#717971] mt-0.5">Aggregate AI queries and syllabus resource views</p>
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20]">
               Daily Volume
             </span>
           </div>
 
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-2">
             {(data?.dailyActivity || [
-              { day: 'Mon', aiQueries: 140, quizAttempts: 45, resourceViews: 190 },
-              { day: 'Tue', aiQueries: 185, quizAttempts: 60, resourceViews: 230 },
-              { day: 'Wed', aiQueries: 210, quizAttempts: 80, resourceViews: 310 },
-              { day: 'Thu', aiQueries: 195, quizAttempts: 75, resourceViews: 280 },
-              { day: 'Fri', aiQueries: 240, quizAttempts: 95, resourceViews: 350 },
+              { day: 'Monday', aiQueries: 140, quizAttempts: 45, resourceViews: 190 },
+              { day: 'Tuesday', aiQueries: 185, quizAttempts: 60, resourceViews: 230 },
+              { day: 'Wednesday', aiQueries: 210, quizAttempts: 80, resourceViews: 310 },
+              { day: 'Thursday', aiQueries: 195, quizAttempts: 75, resourceViews: 280 },
+              { day: 'Friday', aiQueries: 240, quizAttempts: 95, resourceViews: 350 },
             ]).map((item) => (
               <div key={item.day} className="space-y-1.5">
-                <div className="flex justify-between text-xs font-mono text-slate-300">
-                  <span>{item.day}</span>
-                  <span className="text-slate-400">{item.aiQueries} AI Queries • {item.resourceViews} Views</span>
+                <div className="flex justify-between text-xs text-[#404942]">
+                  <span className="font-semibold text-[#181c1b]">{item.day}</span>
+                  <span className="text-[#717971]">{item.aiQueries} AI Queries • {item.resourceViews} Views</span>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden flex">
+                <div className="w-full bg-[#ecefec] rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all"
+                    className="bg-[#134e2f] h-full rounded-full transition-all"
                     style={{ width: `${Math.min(100, (item.aiQueries / 300) * 100)}%` }}
                   ></div>
                 </div>
@@ -169,32 +220,35 @@ export const ReportsAnalytics: React.FC = () => {
         </div>
 
         {/* Subject Usage Distribution */}
-        <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-purple-400" /> Top Subject Queries
-            </h3>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
-              By Popularity
+        <div className="p-6 sm:p-8 rounded-3xl bg-white border border-[#e2e8e2] space-y-6 shadow-sm">
+          <div className="flex justify-between items-center border-b border-[#ecefec] pb-4">
+            <div>
+              <h3 className="text-base font-bold text-[#181c1b] flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-[#006d3d]" /> Top Subject Coursework Interactions
+              </h3>
+              <p className="text-xs text-[#717971] mt-0.5">Most active courses queried by students</p>
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20]">
+              By Volume
             </span>
           </div>
 
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3 pt-2">
             {(data?.subjectDistribution || [
               { subject: 'Data Structures & Algorithms', count: 420 },
               { subject: 'Database Management Systems', count: 350 },
-              { subject: 'Artificial Intelligence & ML', count: 290 },
-              { subject: 'Operating Systems', count: 210 },
-              { subject: 'Web Technologies', count: 180 },
+              { subject: 'Artificial Intelligence & Machine Learning', count: 290 },
+              { subject: 'Operating Systems & Linux Kernel', count: 210 },
+              { subject: 'Full-Stack Web Technologies', count: 180 },
             ]).map((sub, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-950 border border-slate-800/80">
+              <div key={idx} className="flex items-center justify-between p-3.5 rounded-2xl bg-[#f7faf7] border border-[#e2e8e2]">
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-mono text-xs font-bold">
+                  <div className="w-7 h-7 rounded-lg bg-[#ecefec] text-[#134e2f] flex items-center justify-center font-bold text-xs">
                     #{idx + 1}
                   </div>
-                  <span className="text-xs font-semibold text-slate-200">{sub.subject}</span>
+                  <span className="text-xs font-semibold text-[#181c1b]">{sub.subject}</span>
                 </div>
-                <span className="text-xs font-mono text-indigo-300 font-bold">{sub.count} interactions</span>
+                <span className="text-xs font-semibold text-[#006d3d]">{sub.count} queries</span>
               </div>
             ))}
           </div>

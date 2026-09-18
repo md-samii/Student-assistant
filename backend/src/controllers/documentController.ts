@@ -11,7 +11,8 @@ export const getDocuments = async (req: AuthenticatedRequest, res: Response) => 
       return res.status(401).json({ status: 'error', message: 'Not authenticated' });
     }
 
-    const { type } = req.query;
+    const { type, category } = req.query;
+    const filter = (category || type) as string | undefined;
 
     let userDocs = mockUserDocs.get(req.user.userId);
     if (!userDocs) {
@@ -20,19 +21,32 @@ export const getDocuments = async (req: AuthenticatedRequest, res: Response) => 
       mockUserDocs.set(req.user.userId, userDocs);
     }
 
-    if (type && type !== 'ALL') {
-      userDocs = userDocs.filter((d) => d.type === String(type));
+    let filtered = userDocs;
+    if (filter && filter !== 'ALL') {
+      filtered = userDocs.filter((d) => d.type === String(filter) || (d as any).category === String(filter));
     }
 
-    const totalBytes = userDocs.reduce((sum, d) => sum + d.fileSize, 0);
+    const totalBytes = userDocs.reduce((sum, d) => sum + (d.fileSize || 0), 0);
     const totalMB = (totalBytes / (1024 * 1024)).toFixed(2);
+
+    const mappedDocs = filtered.map((d) => ({
+      ...d,
+      type: d.type || (d as any).category || 'RESUME',
+      category: (d as any).category || d.type || 'RESUME',
+      createdAt: (d as any).createdAt || d.uploadedAt || new Date().toISOString(),
+      uploadedAt: d.uploadedAt || (d as any).createdAt || new Date().toISOString(),
+      fileSize: (d as any).fileSizeFormatted || (d.fileSize ? `${(d.fileSize / 1024).toFixed(0)} KB` : '1.2 MB'),
+      fileSizeFormatted: (d as any).fileSizeFormatted || `${((d.fileSize || 500000) / 1024).toFixed(0)} KB`,
+      isVerified: true,
+    }));
 
     return res.status(200).json({
       status: 'success',
       data: {
         totalFiles: userDocs.length,
         totalStorageUsed: `${totalMB} MB`,
-        documents: userDocs,
+        storageUsed: `${totalMB} MB`,
+        documents: mappedDocs,
       },
     });
   } catch (error: any) {
@@ -47,30 +61,34 @@ export const uploadDocument = async (req: AuthenticatedRequest, res: Response) =
       return res.status(401).json({ status: 'error', message: 'Not authenticated' });
     }
 
-    const { name, type = 'RESUME', fileUrl, fileSize } = req.body;
+    const { name, type, category, fileUrl, fileSize } = req.body;
 
     if (!name) {
       return res.status(400).json({ status: 'error', message: 'Document name is required.' });
     }
 
-    const sizeInBytes = fileSize ? parseInt(fileSize, 10) : 512000;
-    const formattedSize = `${(sizeInBytes / 1024).toFixed(0)} KB`;
+    const docType = (category || type || 'RESUME') as any;
+    const sizeInBytes = fileSize && !isNaN(parseInt(fileSize, 10)) ? parseInt(fileSize, 10) : 512000;
+    const formattedSize = typeof fileSize === 'string' && fileSize.includes('B') ? fileSize : `${(sizeInBytes / 1024).toFixed(0)} KB`;
 
-    const newDoc: DocumentSeedItem = {
+    const newDoc = {
       id: `doc_${Date.now()}`,
       userId: req.user.userId,
       name: name.endsWith('.pdf') ? name : `${name}.pdf`,
-      type: type || 'RESUME',
+      type: docType,
+      category: docType,
       fileUrl: fileUrl || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
       storagePath: `firebase-storage/student-docs/${req.user.userId}/${name}`,
       fileSize: sizeInBytes,
       fileSizeFormatted: formattedSize,
       mimeType: 'application/pdf',
       uploadedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      isVerified: true,
     };
 
     let userDocs = mockUserDocs.get(req.user.userId) || DEFAULT_DOCUMENTS_CATALOG.map(d => ({ ...d, userId: req.user!.userId }));
-    userDocs.unshift(newDoc);
+    userDocs.unshift(newDoc as any);
     mockUserDocs.set(req.user.userId, userDocs);
 
     return res.status(201).json({

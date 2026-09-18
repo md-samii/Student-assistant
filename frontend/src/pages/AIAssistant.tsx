@@ -16,7 +16,10 @@ import {
   BookOpen,
   Zap,
   Terminal,
-  FileQuestion
+  FileQuestion,
+  ChevronRight,
+  PlusCircle,
+  GraduationCap
 } from 'lucide-react';
 
 export default function AIAssistant() {
@@ -68,55 +71,76 @@ export default function AIAssistant() {
       const res = await api.post('/ai/chat', {
         question: query,
         subject: selectedSubject,
-        mode,
+        mode: mode,
       });
 
-      const newEntry = res.data.data;
-      setActiveChat(newEntry);
-      setHistory((prev) => [newEntry, ...prev]);
-      if (!promptOverride) setQuestion('');
+      const newInteraction = res.data.data.interaction;
+      setActiveChat(newInteraction);
+      setQuestion('');
+      await fetchHistory();
     } catch (err: any) {
-      console.error('Ask AI Error:', err);
+      console.error('AI chat failed:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleToggleBookmark = async (id: string) => {
+  const handleSelectHistory = (item: any) => {
+    setActiveChat(item);
+  };
+
+  const handleToggleBookmark = async (id: string, currentStatus: boolean) => {
     try {
-      const res = await api.post(`/ai/bookmark/${id}`);
-      const isBookmarked = res.data.data.isBookmarked;
-
+      await api.patch(`/ai/bookmark/${id}`, {
+        isBookmarked: !currentStatus,
+      });
       setHistory((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, isBookmarked } : item))
+        prev.map((h) => (h.id === id ? { ...h, isBookmarked: !currentStatus } : h))
       );
-
-      if (activeChat && activeChat.id === id) {
-        setActiveChat((prev: any) => ({ ...prev, isBookmarked }));
+      if (activeChat?.id === id) {
+        setActiveChat((prev: any) => ({ ...prev, isBookmarked: !currentStatus }));
       }
-    } catch (e) {}
+    } catch (err) {
+      console.error('Bookmark error:', err);
+    }
   };
 
   const handleDeleteHistory = async (id: string) => {
     try {
       await api.delete(`/ai/history/${id}`);
-      setHistory((prev) => prev.filter((item) => item.id !== id));
-      if (activeChat && activeChat.id === id) {
+      setHistory((prev) => prev.filter((h) => h.id !== id));
+      if (activeChat?.id === id) {
         setActiveChat(null);
       }
-    } catch (e) {}
+    } catch (err) {
+      console.error('Delete history error:', err);
+    }
   };
 
-  const handleCopyCode = (text: string) => {
+  const handleClearAllHistory = async () => {
+    if (!window.confirm('Are you sure you want to clear all chat history?')) return;
+    try {
+      await api.delete('/ai/history');
+      setHistory([]);
+      setActiveChat(null);
+    } catch (err) {
+      console.error('Clear all history error:', err);
+    }
+  };
+
+  const handleCopyAnswer = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const filteredHistory = history.filter((item) => {
-    const matchesSearch = item.question.toLowerCase().includes(searchHistory.toLowerCase());
-    const matchesTab = activeTab === 'ALL' || (activeTab === 'BOOKMARKS' && item.isBookmarked);
-    return matchesSearch && matchesTab;
+  const filteredHistory = history.filter((h) => {
+    const matchesSearch = h.question.toLowerCase().includes(searchHistory.toLowerCase()) ||
+                          h.subject.toLowerCase().includes(searchHistory.toLowerCase());
+    if (activeTab === 'BOOKMARKS') {
+      return matchesSearch && h.isBookmarked;
+    }
+    return matchesSearch;
   });
 
   const quickPrompts = [
@@ -127,33 +151,34 @@ export default function AIAssistant() {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
-      {/* Top AI Header */}
-      <div className="eduflow-card p-6 bg-gradient-to-r from-indigo-950/70 via-slate-900/90 to-purple-950/70 border border-indigo-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+    <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
+      {/* Top AI Header Banner */}
+      <div className="stitch-card p-6 sm:p-8 bg-white border border-[#e2e8e2] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 shrink-0">
-            <Bot className="w-7 h-7" />
+          <div className="w-12 h-12 rounded-full bg-[#134e2f] text-white flex items-center justify-center shadow-sm shrink-0">
+            <Bot className="w-6 h-6" />
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[10px] font-mono font-bold uppercase tracking-wider mb-1">
-              <Sparkles className="w-3 h-3 text-indigo-400" /> GPT-4 Academic Engine
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Academic AI Tutoring Engine
             </div>
-            <h1 className="text-2xl font-extrabold text-white font-sans">AI Study Assistant</h1>
-            <p className="text-slate-400 text-xs font-mono mt-0.5">
-              Target Context: {profile?.university || 'VTU'} • {profile?.branch || 'CS'} • Sem {profile?.semester || 6}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">AI Academic Assistant</h1>
+            <p className="text-[#404942] text-xs sm:text-sm mt-0.5">
+              Syllabus Context: {profile?.university || 'VTU'} • {profile?.branch || 'CS'} • Semester {profile?.semester || 6}
             </p>
           </div>
         </div>
 
+        {/* Mode Selector */}
         <div className="flex flex-wrap items-center gap-2">
           {['THEORY', 'CODE', 'LAB', 'INTERVIEW', 'PYQ'].map((m) => (
             <button
               key={m}
               onClick={() => setMode(m as any)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all duration-200 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
                 mode === m
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
+                  ? 'bg-[#134e2f] text-white shadow-sm'
+                  : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
               }`}
             >
               {m}
@@ -162,240 +187,262 @@ export default function AIAssistant() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left 3 Columns: Chat Section */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Question Input Form */}
-          <div className="eduflow-card p-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-mono font-bold text-slate-300">Selected Subject:</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Drawer: Subject Scope & History */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="stitch-card p-5 space-y-4 bg-white">
+            <button
+              onClick={() => setActiveChat(null)}
+              className="w-full py-2.5 px-4 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.98]"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ New Query</span>
+            </button>
+
+            {/* Subject Selector */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-[#404942]">
+                <span className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-[#006d3d]" /> Subject Scope:
+                </span>
               </div>
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold text-indigo-300 outline-none focus:border-indigo-500 transition"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#f7faf7] border border-[#c0c9bf] text-xs font-semibold text-[#181c1b] focus:border-[#134e2f] outline-none"
               >
                 {subjectsList.map((s) => (
                   <option key={s.code} value={s.name}>
-                    {s.code} — {s.name}
+                    {s.code} - {s.name}
                   </option>
                 ))}
               </select>
             </div>
 
-            <form onSubmit={handleAskAI} className="relative">
-              <textarea
-                rows={3}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder={`Ask any ${selectedSubject} question... (e.g. "Explain with step-by-step example" or "Write implementation in C++")`}
-                className="w-full pl-4 pr-28 py-3 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-100 placeholder-slate-500 text-xs font-sans outline-none resize-none focus:border-indigo-500 transition"
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !question.trim()}
-                className="btn-shimmer absolute right-3 bottom-3.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <span>Analyzing...</span>
-                ) : (
-                  <>
-                    <span>Ask AI</span>
-                    <Send className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Quick Suggestions */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="text-[10px] font-mono font-bold uppercase text-slate-500">Prompts:</span>
-              {quickPrompts.map((qp, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setSelectedSubject(qp.subject);
-                    setMode(qp.mode as any);
-                    setQuestion(qp.text);
-                    handleAskAI(undefined, qp.text);
-                  }}
-                  className="px-3 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 font-semibold transition-all flex items-center gap-1.5 hover:scale-[1.02]"
-                >
-                  <Zap className="w-3 h-3 text-amber-400" />
-                  <span>{qp.text}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Active AI Answer Display */}
-          {activeChat ? (
-            <div className="eduflow-card p-6 sm:p-8 space-y-6 relative border border-indigo-500/30 shadow-2xl">
-              <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="eduflow-pill">
-                      {activeChat.subject}
-                    </span>
-                    <span className="text-xs text-slate-400 font-mono">• {new Date(activeChat.createdAt).toLocaleTimeString()}</span>
-                  </div>
-                  <h2 className="text-xl font-bold text-white font-sans">{activeChat.question}</h2>
+            {/* History Tabs & Search */}
+            <div className="pt-2 border-t border-[#e2e8e2] space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setActiveTab('ALL')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                      activeTab === 'ALL'
+                        ? 'bg-[#134e2f] text-white'
+                        : 'text-[#404942] hover:bg-[#f0f4f0]'
+                    }`}
+                  >
+                    Recent
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('BOOKMARKS')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1 ${
+                      activeTab === 'BOOKMARKS'
+                        ? 'bg-[#134e2f] text-white'
+                        : 'text-[#404942] hover:bg-[#f0f4f0]'
+                    }`}
+                  >
+                    <Bookmark className="w-3 h-3" /> Saved
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => handleToggleBookmark(activeChat.id)}
-                  className={`p-2.5 rounded-xl border transition ${
-                    activeChat.isBookmarked
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                  title="Bookmark Answer"
-                >
-                  {activeChat.isBookmarked ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
-                </button>
-              </div>
-
-              {/* Response Content */}
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-xs font-mono font-bold uppercase text-indigo-400 flex items-center gap-1.5">
-                    <HelpCircle className="w-4 h-4 text-indigo-400" /> Concept & Academic Explanation
-                  </h3>
-                  <p className="text-xs text-slate-200 leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
-                    {activeChat.aiResponse.explanation}
-                  </p>
-                </div>
-
-                {activeChat.aiResponse.keyPoints?.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-mono font-bold uppercase text-emerald-400 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-emerald-400" /> Key Takeaway Points
-                    </h3>
-                    <ul className="space-y-1.5">
-                      {activeChat.aiResponse.keyPoints.map((pt: string, i: number) => (
-                        <li key={i} className="text-xs text-slate-200 flex items-start gap-2 bg-slate-900/60 px-3.5 py-2.5 rounded-xl border border-slate-800/60">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5" />
-                          <span>{pt}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {activeChat.aiResponse.codeSnippet && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-mono font-bold uppercase text-cyan-400 flex items-center gap-1.5">
-                        <Terminal className="w-4 h-4 text-cyan-400" /> Implementation ({activeChat.aiResponse.language || 'cpp'})
-                      </h3>
-                      <button
-                        onClick={() => handleCopyCode(activeChat.aiResponse.codeSnippet)}
-                        className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold flex items-center gap-1 transition"
-                      >
-                        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        <span>{copied ? 'Copied!' : 'Copy Code'}</span>
-                      </button>
-                    </div>
-
-                    <pre className="p-4 rounded-xl bg-slate-950 text-cyan-300 text-xs font-mono overflow-x-auto leading-relaxed border border-slate-800 shadow-inner">
-                      <code>{activeChat.aiResponse.codeSnippet}</code>
-                    </pre>
-                  </div>
+                {history.length > 0 && (
+                  <button
+                    onClick={handleClearAllHistory}
+                    className="text-[11px] text-rose-600 hover:underline"
+                    title="Clear history"
+                  >
+                    Clear All
+                  </button>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="eduflow-card p-12 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
-                <Bot className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-white text-base font-sans">Ready for Q&A</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Type your syllabus query or click any suggested question to generate formatted academic answers.
-              </p>
-            </div>
-          )}
-        </div>
 
-        {/* Right 1 Column: Saved Conversations */}
-        <div className="space-y-4">
-          <div className="eduflow-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-white text-xs font-sans">Saved Q&A History</h3>
-              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                <button
-                  onClick={() => setActiveTab('ALL')}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition ${
-                    activeTab === 'ALL' ? 'bg-indigo-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setActiveTab('BOOKMARKS')}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition ${
-                    activeTab === 'BOOKMARKS' ? 'bg-amber-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  Saved
-                </button>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchHistory}
+                  onChange={(e) => setSearchHistory(e.target.value)}
+                  placeholder="Search past chats..."
+                  className="w-full pl-9 pr-3 py-1.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] placeholder-gray-400 outline-none"
+                />
               </div>
             </div>
 
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchHistory}
-                onChange={(e) => setSearchHistory(e.target.value)}
-                placeholder="Search history..."
-                className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white outline-none"
-              />
-            </div>
-
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+            {/* History List */}
+            <div className="max-h-[380px] overflow-y-auto space-y-2 pr-1">
               {filteredHistory.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4 font-mono">No entries found.</p>
+                <p className="text-center text-xs text-[#717971] py-6">
+                  {activeTab === 'BOOKMARKS' ? 'No bookmarked queries' : 'No query history yet'}
+                </p>
               ) : (
                 filteredHistory.map((item) => (
                   <div
                     key={item.id}
-                    onClick={() => setActiveChat(item)}
-                    className={`p-3 rounded-xl border transition cursor-pointer flex items-start justify-between gap-2 group ${
+                    onClick={() => handleSelectHistory(item)}
+                    className={`p-3 rounded-2xl border text-left cursor-pointer transition flex items-start justify-between gap-2 ${
                       activeChat?.id === item.id
-                        ? 'bg-indigo-600/20 text-white border-indigo-500/50 shadow-md'
-                        : 'bg-slate-900/60 border-slate-800/80 hover:border-indigo-500/30 text-slate-300'
+                        ? 'bg-[#e8f5e9] border-[#97f3b5] text-[#00361c]'
+                        : 'bg-[#f7faf7] hover:bg-white border-[#e2e8e2] text-[#181c1b]'
                     }`}
                   >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {item.isBookmarked && <Bookmark className="w-3 h-3 text-amber-400 shrink-0" />}
-                        <span className={`text-[10px] font-mono font-bold uppercase ${activeChat?.id === item.id ? 'text-indigo-300' : 'text-indigo-400'}`}>
-                          {item.subject}
-                        </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold truncate">{item.question}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-[#404942] mt-0.5">
+                        <span className="truncate">{item.subject}</span>
+                        <span>•</span>
+                        <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <h4 className="text-xs font-bold truncate group-hover:text-indigo-300">
-                        {item.question}
-                      </h4>
                     </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteHistory(item.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 transition"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleBookmark(item.id, item.isBookmarked);
+                        }}
+                        className="p-1 hover:text-[#006d3d] text-[#717971]"
+                      >
+                        {item.isBookmarked ? (
+                          <BookmarkCheck className="w-3.5 h-3.5 text-[#006d3d]" />
+                        ) : (
+                          <Bookmark className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteHistory(item.id);
+                        }}
+                        className="p-1 hover:text-rose-600 text-gray-400"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
             </div>
           </div>
+        </div>
+
+        {/* Right Canvas: Chat & AI Output */}
+        <div className="lg:col-span-8 space-y-4">
+          {/* Ask Input Form */}
+          <div className="stitch-card p-5 bg-white space-y-3">
+            <form onSubmit={handleAskAI} className="relative">
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Ask any concept, algorithm, formula derivation, or exam question..."
+                rows={3}
+                className="w-full p-4 pr-12 rounded-2xl bg-[#f7faf7] border border-[#c0c9bf] focus:border-[#134e2f] focus:bg-white text-xs sm:text-sm text-[#181c1b] placeholder-gray-400 outline-none transition resize-none"
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !question.trim()}
+                className="absolute right-3.5 bottom-4 p-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white disabled:opacity-40 transition shadow-sm"
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </button>
+            </form>
+
+            {/* Quick Prompts */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[11px] font-bold text-[#404942] uppercase tracking-wider">
+                Quick Prompts:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {quickPrompts.map((qp, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedSubject(qp.subject);
+                      setMode(qp.mode as any);
+                      handleAskAI(undefined, qp.text);
+                    }}
+                    className="px-3 py-1.5 rounded-full bg-[#f0f4f0] hover:bg-[#e1e9e1] border border-[#e2e8e2] text-[11px] font-semibold text-[#181c1b] transition"
+                  >
+                    {qp.text}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Active Chat Conversation Card */}
+          {activeChat ? (
+            <div className="stitch-card p-6 sm:p-8 bg-white space-y-6">
+              {/* Question bubble */}
+              <div className="flex justify-end">
+                <div className="max-w-2xl bg-[#134e2f] text-white p-4 rounded-2xl rounded-tr-sm shadow-sm">
+                  <div className="flex items-center justify-between gap-4 text-[10px] text-emerald-200/90 font-semibold mb-1">
+                    <span>You • {activeChat.subject}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-white/10 text-white font-mono">{activeChat.mode}</span>
+                  </div>
+                  <p className="text-xs sm:text-sm leading-relaxed">{activeChat.question}</p>
+                </div>
+              </div>
+
+              {/* AI Answer bubble */}
+              <div className="flex items-start gap-3.5 max-w-3xl">
+                <div className="w-9 h-9 rounded-full bg-[#e8f5e9] text-[#006d3d] flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0 bg-[#f7faf7] border border-[#e2e8e2] p-5 sm:p-6 rounded-2xl rounded-tl-sm space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#e2e8e2]">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#00361c]">Academic Assistant</span>
+                      <span className="px-2 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-[10px] font-semibold">
+                        Syllabus Aligned
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCopyAnswer(activeChat.answer)}
+                        className="px-2.5 py-1 rounded-full bg-white border border-[#c0c9bf] hover:bg-gray-50 text-xs font-semibold text-[#181c1b] flex items-center gap-1 transition"
+                      >
+                        {copied ? <Check className="w-3.5 h-3.5 text-[#006d3d]" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copied ? 'Copied' : 'Copy'}</span>
+                      </button>
+                      <button
+                        onClick={() => handleToggleBookmark(activeChat.id, activeChat.isBookmarked)}
+                        className="p-1.5 rounded-full bg-white border border-[#c0c9bf] hover:bg-gray-50 text-[#181c1b] transition"
+                        title="Save to bookmarks"
+                      >
+                        {activeChat.isBookmarked ? (
+                          <BookmarkCheck className="w-3.5 h-3.5 text-[#006d3d]" />
+                        ) : (
+                          <Bookmark className="w-3.5 h-3.5 text-gray-500" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Render Answer Text */}
+                  <div className="text-xs sm:text-sm text-[#181c1b] leading-relaxed whitespace-pre-wrap font-sans">
+                    {activeChat.answer}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="stitch-card p-12 text-center space-y-4 bg-white">
+              <div className="w-14 h-14 rounded-full bg-[#e8f5e9] text-[#006d3d] flex items-center justify-center mx-auto shadow-sm">
+                <Bot className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-[#181c1b]">Ready for Your Academic Questions</h3>
+                <p className="text-xs text-[#404942] max-w-md mx-auto">
+                  Ask questions about algorithms, operating systems, compiler design, database proofs, or interview preparation.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

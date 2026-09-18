@@ -4,85 +4,115 @@
 
 @layer base {
   body {
-    @apply bg-[#080c14] text-slate-100 min-h-screen antialiased font-sans selection:bg-indigo-500 selection:text-white overflow-x-hidden;
-    background-image: 
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
-      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.08), transparent 50%),
-      radial-gradient(circle at 0% 50%, rgba(6, 182, 212, 0.06), transparent 50%);
-    background-attachment: fixed;
+    @apply bg-[#f7faf7] text-[#181c1b] min-h-screen antialiased font-sans selection:bg-[#97f3b5] selection:text-[#00361c] overflow-x-hidden;
   }
 }
 
-/* Ultra-Premium Glassmorphism & Card Utility Classes */
-.glass-panel {
-  background: rgba(13, 19, 34, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* Stitch Design System - Academic & Career Intelligence Engine */
+.stitch-card {
+  background: #FFFFFF;
+  border-radius: 1.5rem; /* 24px */
+  border: 1px solid #e2e8e2;
+  box-shadow: 0 4px 20px -2px rgba(19, 78, 47, 0.04);
+  transition: all 0.2s ease-in-out;
+}
+
+.stitch-card:hover {
+  box-shadow: 0 10px 30px -4px rgba(19, 78, 47, 0.08);
+  border-color: #c0c9bf;
+}
+
+.stitch-card-dark {
+  background: #134e2f;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  box-shadow: 0 16px 40px -8px rgba(19, 78, 47, 0.25);
+}
+
+.stitch-btn-primary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-semibold shadow-sm transition-all duration-150 active:scale-[0.98];
+}
+
+.stitch-btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-[#f0f4f0] text-[#181c1b] border border-[#c0c9bf] text-xs font-semibold shadow-sm transition-all duration-150 active:scale-[0.98];
+}
+
+.stitch-input {
+  @apply w-full px-4 py-2.5 rounded-full bg-white border border-[#c0c9bf] text-xs text-[#181c1b] placeholder-gray-400 focus:outline-none focus:border-[#134e2f] focus:ring-1 focus:ring-[#134e2f] transition;
+}
+
+/* Donezo High-End Clean Aesthetic */
+.donezo-card {
+  background: #FFFFFF;
+  border-radius: 1.5rem;
+  border: 1px solid #e2e8e2;
+  box-shadow: 0 4px 20px -2px rgba(19, 78, 47, 0.03);
+  transition: all 0.2s ease-in-out;
+}
+
+.donezo-card:hover {
+  box-shadow: 0 10px 25px -4px rgba(19, 78, 47, 0.06);
+}
+
+/* Featured Dark Forest Card */
+.donezo-card-dark {
+  background: radial-gradient(circle at 10% 10%, #1a6444 0%, #144e35 60%, #0d3824 100%);
+  border-radius: 1.75rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+  color: #FFFFFF;
+  box-shadow: 0 12px 30px -8px rgba(20, 78, 53, 0.35);
 }
 
-.eduflow-card {
-  background: linear-gradient(135deg, rgba(17, 24, 39, 0.85) 0%, rgba(13, 19, 34, 0.75) 100%);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-radius: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.eduflow-card:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.1);
-  transform: translateY(-3px);
-}
-
-.eduflow-card-dark {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0.9) 100%);
-  backdrop-filter: blur(14px);
-  border-radius: 1.25rem;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  box-shadow: 0 15px 35px -10px rgba(99, 102, 241, 0.2);
-}
-
-.eduflow-pill {
-  border-radius: 9999px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  background: rgba(99, 102, 241, 0.1);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.1);
-}
-
-/* Shimmer Button Effect */
-.btn-shimmer {
+/* Time Tracker Patterned Background Card */
+.donezo-card-timetracker {
+  background: linear-gradient(135deg, #0d3623 0%, #144e35 50%, #092618 100%);
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 12px 30px -8px rgba(13, 54, 35, 0.45);
 }
 
-.btn-shimmer::after {
+.donezo-card-timetracker::before {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    60deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.15) 50%,
-    transparent 70%
-  );
-  transform: rotate(30deg);
-  transition: transform 0.8s ease;
+  inset: 0;
+  background-image: radial-gradient(rgba(34, 197, 94, 0.12) 1px, transparent 1px);
+  background-size: 16px 16px;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
-.btn-shimmer:hover::after {
-  transform: translate(100%, 100%) rotate(30deg);
+/* Diagonal Hatched Bar pattern (Matches reference chart Sunday/Thursday/Friday/Saturday bars) */
+.bar-hatched {
+  background: repeating-linear-gradient(
+    -45deg,
+    #144E35,
+    #144E35 2.5px,
+    #E5E7EB 2.5px,
+    #E5E7EB 7px
+  );
+}
+
+.legend-hatched {
+  background: repeating-linear-gradient(
+    -45deg,
+    #144E35,
+    #144E35 2px,
+    #E5E7EB 2px,
+    #E5E7EB 5px
+  );
+}
+
+/* Donezo Pill Buttons */
+.donezo-btn-primary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#144E35] text-white text-xs font-semibold hover:bg-[#0F3D2A] transition-all duration-200 shadow-sm active:scale-[0.98];
+}
+
+.donezo-btn-outline {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white text-gray-700 text-xs font-semibold border border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-sm active:scale-[0.98];
 }
 
 /* Material symbols font icon styling */
@@ -94,21 +124,53 @@
   'opsz' 24;
 }
 
-/* Smooth Custom Scrollbars */
+/* Smooth Minimal Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #080c14;
+  background: #F4F5F7;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #CBD5E1;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #94A3B8;
+}
+
+/* Legacy fallback card support if referenced */
+.glass-panel {
+  background: #FFFFFF;
+  border-radius: 1.5rem;
+  border: 1px solid #EAEBEF;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.eduflow-card {
+  background: #FFFFFF;
+  border-radius: 1.5rem;
+  border: 1px solid #EAEBEF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+}
+
+.eduflow-card:hover {
+  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.06);
+  border-color: #D1D5DB;
+}
+
+.eduflow-pill {
+  border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  background: #F0FDF4;
+  color: #166534;
+  border: 1px solid #BBF7D0;
 }

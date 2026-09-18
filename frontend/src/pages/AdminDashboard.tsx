@@ -4,17 +4,17 @@ import { useAuth } from '../context/AuthContext';
 import {
   Users,
   BookOpen,
-  FileText,
   Award,
-  Briefcase,
   Bot,
   ShieldCheck,
   Search,
   CheckCircle,
   XCircle,
   RefreshCw,
-  Activity,
   Sparkles,
+  TrendingUp,
+  ArrowUpRight,
+  Filter
 } from 'lucide-react';
 
 interface Metrics {
@@ -110,164 +110,197 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto font-sans pb-12 animate-fade-in">
       {/* Header Banner */}
-      <div className="eduflow-card p-8 bg-gradient-to-r from-white via-[#f0f3ff] to-[#e7eeff] border border-[#c4c6d1]/40 relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#052659]/10 text-[#052659] text-xs font-mono font-semibold uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#30618f]" /> System Administration & Monitoring
+          <div className="inline-flex items-center gap-2 mb-1">
+            <h1 className="text-3xl font-extrabold text-[#181c1b] tracking-tight">
+              Institutional Operations &amp; Academic Intelligence
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-bold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#006d3d]"></span> Live Sync
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#001234] font-sans">
-            EduFlow Admin Control Suite
-          </h1>
-          <p className="text-[#44474f] text-xs font-mono mt-1">
-            System health, active student directory management, database audit logs & platform analytics
+          <p className="text-sm text-[#404942]">
+            Monitor student engagement, AI computational quota consumption, syllabus coverage, and verified student credentials.
           </p>
         </div>
 
         <button
           onClick={fetchAdminData}
-          className="px-4 py-2.5 rounded-xl bg-[#052659] hover:bg-[#30618f] text-white font-bold text-xs transition shadow-md shadow-[#052659]/20 flex items-center gap-1.5 shrink-0"
+          className="px-4 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white font-semibold text-xs transition shadow-sm flex items-center gap-2 shrink-0 active:scale-95"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh System Logs</span>
+          <RefreshCw className={`w-3.5 h-3.5 text-[#97f3b5] ${isLoading ? 'animate-spin' : ''}`} />
+          <span>Refresh Telemetry</span>
         </button>
       </div>
 
+      {/* 4 Bento Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Metric 1: Dark Forest Accent Card */}
+        <div className="bg-[#134e2f] text-white rounded-3xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between group">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-medium text-white/80">Active Enrolled Scholars</span>
+              <div className="text-3xl font-extrabold text-white mt-2 tracking-tight">
+                {metrics?.totalStudents || 0}
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <ArrowUpRight className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-1.5 text-xs text-[#97f3b5] font-semibold pt-3 border-t border-white/10">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>{metrics?.activeStudents || 0} Active Student Profiles</span>
+          </div>
+          <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#006d3d]/30 rounded-full blur-xl pointer-events-none"></div>
+        </div>
+
+        {/* Metric 2: AI Inference Queries */}
+        <div className="bg-white border border-[#e2e8e2] rounded-3xl p-6 flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-medium text-[#404942]">AI Assistant Queries</span>
+              <div className="text-3xl font-extrabold text-[#181c1b] mt-2 tracking-tight">
+                {metrics?.totalAIChats || 0}
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center text-[#181c1b]">
+              <Bot className="w-4 h-4 text-[#006d3d]" />
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-[#ecefec]">
+            <div className="flex items-center justify-between text-xs text-[#404942] mb-1">
+              <span>Syllabus Q&amp;A Prompts</span>
+              <span className="font-bold text-[#006d3d]">Active</span>
+            </div>
+            <div className="w-full bg-[#ecefec] h-1.5 rounded-full overflow-hidden">
+              <div className="bg-[#006d3d] h-full rounded-full" style={{ width: '70%' }}></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric 3: Curriculum Resources */}
+        <div className="bg-white border border-[#e2e8e2] rounded-3xl p-6 flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-medium text-[#404942]">Curriculum Resources</span>
+              <div className="text-3xl font-extrabold text-[#181c1b] mt-2 tracking-tight">
+                {metrics?.totalResources || 0}
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center text-[#181c1b]">
+              <BookOpen className="w-4 h-4 text-[#006d3d]" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between pt-3 border-t border-[#ecefec] text-xs text-[#404942]">
+            <span>Across {metrics?.totalSubjects || 0} Subjects</span>
+            <span className="px-2 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-[10px] font-bold">Verified</span>
+          </div>
+        </div>
+
+        {/* Metric 4: Practice Quizzes */}
+        <div className="bg-white border border-[#e2e8e2] rounded-3xl p-6 flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="text-xs font-medium text-[#404942]">Assessment Submissions</span>
+              <div className="text-3xl font-extrabold text-[#181c1b] mt-2 tracking-tight">
+                {metrics?.totalSubmissions || 0}
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center text-[#181c1b]">
+              <Award className="w-4 h-4 text-[#006d3d]" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between pt-3 border-t border-[#ecefec] text-xs text-[#404942]">
+            <span>{metrics?.totalQuizzes || 0} Active Quizzes</span>
+            <span className="px-2 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-[10px] font-bold">Tier 1</span>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
-      <div className="eduflow-card p-4 flex items-center gap-2">
+      <div className="bg-white border border-[#e2e8e2] p-2.5 rounded-full flex items-center gap-2 shadow-sm w-fit">
         <button
           onClick={() => setActiveTab('METRICS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold font-sans transition ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition ${
             activeTab === 'METRICS'
-              ? 'bg-[#052659] text-white'
-              : 'bg-[#f0f3ff] text-[#44474f] hover:text-[#001234]'
+              ? 'bg-[#134e2f] text-white shadow-sm'
+              : 'text-[#404942] hover:text-[#181c1b] hover:bg-[#ecefec]'
           }`}
         >
-          Platform Analytics
+          Platform Overview
         </button>
         <button
           onClick={() => setActiveTab('STUDENTS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold font-sans transition ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition ${
             activeTab === 'STUDENTS'
-              ? 'bg-[#052659] text-white'
-              : 'bg-[#f0f3ff] text-[#44474f] hover:text-[#001234]'
+              ? 'bg-[#134e2f] text-white shadow-sm'
+              : 'text-[#404942] hover:text-[#181c1b] hover:bg-[#ecefec]'
           }`}
         >
-          Student Accounts ({students.length})
+          Student Directory ({students.length})
         </button>
         <button
           onClick={() => setActiveTab('LOGS')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold font-sans transition ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition ${
             activeTab === 'LOGS'
-              ? 'bg-[#052659] text-white'
-              : 'bg-[#f0f3ff] text-[#44474f] hover:text-[#001234]'
+              ? 'bg-[#134e2f] text-white shadow-sm'
+              : 'text-[#404942] hover:text-[#181c1b] hover:bg-[#ecefec]'
           }`}
         >
           System Audit Logs ({logs.length})
         </button>
       </div>
 
-      {/* Metrics Section */}
-      {activeTab === 'METRICS' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="eduflow-card p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-[#747780]">Total Users</span>
-              <Users className="w-5 h-5 text-[#30618f]" />
-            </div>
-            <div className="mt-4">
-              <p className="text-3xl font-extrabold text-[#001234]">{metrics?.totalStudents || 0}</p>
-              <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">
-                {metrics?.activeStudents || 0} Active Student Profiles
-              </p>
-            </div>
-          </div>
-
-          <div className="eduflow-card p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-[#747780]">Curriculum Notes</span>
-              <BookOpen className="w-5 h-5 text-[#30618f]" />
-            </div>
-            <div className="mt-4">
-              <p className="text-3xl font-extrabold text-[#001234]">{metrics?.totalResources || 0}</p>
-              <p className="text-[11px] font-mono text-[#747780] mt-1">
-                Across {metrics?.totalSubjects || 0} VTU Subjects
-              </p>
-            </div>
-          </div>
-
-          <div className="eduflow-card p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-[#747780]">Practice Quizzes</span>
-              <Award className="w-5 h-5 text-[#30618f]" />
-            </div>
-            <div className="mt-4">
-              <p className="text-3xl font-extrabold text-[#001234]">{metrics?.totalQuizzes || 0}</p>
-              <p className="text-[11px] font-mono text-[#747780] mt-1">
-                {metrics?.totalSubmissions || 0} Student Submissions
-              </p>
-            </div>
-          </div>
-
-          <div className="eduflow-card p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-[#747780]">AI Conversations</span>
-              <Bot className="w-5 h-5 text-[#30618f]" />
-            </div>
-            <div className="mt-4">
-              <p className="text-3xl font-extrabold text-[#001234]">{metrics?.totalAIChats || 0}</p>
-              <p className="text-[11px] font-mono text-[#747780] mt-1">
-                GPT-4 Academic Q&A Prompts
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Student Directory Table */}
       {activeTab === 'STUDENTS' && (
-        <div className="eduflow-card p-6 space-y-4">
+        <div className="bg-white border border-[#e2e8e2] rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <h2 className="text-base font-bold text-[#001234] font-sans">Student User Directory</h2>
-            <div className="relative min-w-[240px]">
-              <Search className="w-4 h-4 text-[#747780] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <div>
+              <h2 className="text-lg font-bold text-[#181c1b]">Enrolled Scholar Directory</h2>
+              <p className="text-xs text-[#717971]">Inspect active matriculation statuses and profile privileges</p>
+            </div>
+            <div className="relative min-w-[280px]">
+              <Search className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name or email..."
-                className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#f0f3ff] border border-[#c4c6d1]/40 text-xs text-[#001234] outline-none"
+                placeholder="Search scholar name or email..."
+                className="w-full pl-10 pr-4 py-2 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
               />
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[#e2e8f0] text-[#747780]">
+                <tr className="border-b border-[#ecefec] text-[#717971] font-semibold">
                   <th className="py-3 px-4">Student Name</th>
                   <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4">University & Branch</th>
+                  <th className="py-3 px-4">University &amp; Branch</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e2e8f0]">
+              <tbody className="divide-y divide-[#ecefec]">
                 {filteredStudents.map((st) => (
-                  <tr key={st.id} className="hover:bg-[#f0f3ff]/50 transition">
-                    <td className="py-3 px-4 font-bold text-[#001234]">{st.fullName}</td>
-                    <td className="py-3 px-4 text-[#44474f]">{st.email}</td>
-                    <td className="py-3 px-4 text-[#747780]">
-                      {st.profile?.branch ? `${st.profile.branch} (Sem ${st.profile.semester})` : 'VTU Student'}
+                  <tr key={st.id} className="hover:bg-[#f7faf7] transition">
+                    <td className="py-3 px-4 font-bold text-[#181c1b]">{st.fullName}</td>
+                    <td className="py-3 px-4 text-[#404942]">{st.email}</td>
+                    <td className="py-3 px-4 text-[#717971]">
+                      {st.profile?.branch ? `${st.profile.branch} (Sem ${st.profile.semester})` : 'Engineering Scholar'}
                     </td>
                     <td className="py-3 px-4">
                       {st.isActive ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 font-bold text-[10px]">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] font-bold text-[10px]">
                           Active
                         </span>
                       ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 font-bold text-[10px]">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#ffdad6] text-[#ba1a1a] font-bold text-[10px]">
                           Disabled
                         </span>
                       )}
@@ -275,10 +308,10 @@ export default function AdminDashboard() {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => handleToggleStudentStatus(st.id, st.isActive)}
-                        className={`px-3 py-1 rounded-xl text-[11px] font-bold transition ${
+                        className={`px-3 py-1 rounded-full text-[11px] font-semibold transition ${
                           st.isActive
-                            ? 'bg-rose-500/10 text-rose-700 hover:bg-rose-500/20'
-                            : 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20'
+                            ? 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-[#ffb4ab]'
+                            : 'bg-[#e8f5e9] text-[#1b5e20] hover:bg-[#d0eed8]'
                         }`}
                       >
                         {st.isActive ? 'Disable' : 'Enable'}
@@ -294,16 +327,19 @@ export default function AdminDashboard() {
 
       {/* Audit Logs */}
       {activeTab === 'LOGS' && (
-        <div className="eduflow-card p-6 space-y-4">
-          <h2 className="text-base font-bold text-[#001234] font-sans">System Audit Logs</h2>
+        <div className="bg-white border border-[#e2e8e2] rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
+          <div>
+            <h2 className="text-lg font-bold text-[#181c1b]">System Audit Logs &amp; Integrity Records</h2>
+            <p className="text-xs text-[#717971]">Real-time immutable log stream of student actions and administrative events</p>
+          </div>
           <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
             {logs.map((log) => (
-              <div key={log.id} className="p-3.5 rounded-xl bg-[#f0f3ff] border border-[#c4c6d1]/30 flex items-center justify-between text-xs font-mono">
+              <div key={log.id} className="p-3.5 rounded-2xl bg-[#f7faf7] border border-[#e2e8e2] flex items-center justify-between text-xs">
                 <div>
-                  <p className="font-bold text-[#001234]">{log.action}</p>
-                  <p className="text-[11px] text-[#747780]">{log.details || 'No details'}</p>
+                  <p className="font-bold text-[#181c1b]">{log.action}</p>
+                  <p className="text-[11px] text-[#717971]">{log.details || 'System event recorded'}</p>
                 </div>
-                <span className="text-[11px] text-[#747780]">{new Date(log.createdAt).toLocaleString()}</span>
+                <span className="text-[11px] text-[#717971] font-mono">{new Date(log.createdAt).toLocaleString()}</span>
               </div>
             ))}
           </div>
