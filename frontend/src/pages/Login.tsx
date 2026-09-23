@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCap, Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, Sparkles, ShieldCheck } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -54,21 +55,33 @@ export default function Login() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSuccess = async (credentialResponse: {
+    credential?: string;
+  }) => {
     try {
+      setError(null);
       setIsSubmitting(true);
-      await loginWithGoogle({
-        email: 'rahul.sharma@student.vtu.ac.in',
-        fullName: 'Rahul Sharma',
-        profilePicture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-        googleId: '10928374659182374'
-      });
+
+      if (!credentialResponse.credential) {
+        throw new Error('Google did not return an authentication credential.');
+      }
+
+      await loginWithGoogle(credentialResponse.credential);
+
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Google Sign-In failed.');
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Google Sign-In failed.'
+      );
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google Sign-In failed. Please try again.');
   };
 
   return (
@@ -127,15 +140,17 @@ export default function Login() {
             )}
 
             {/* Google Sign-In */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-full bg-white hover:bg-[#f0f4f0] border border-[#c0c9bf] text-[#181c1b] font-semibold text-xs transition-all flex items-center justify-center gap-3 mb-6 shadow-sm group"
-            >
-              <GoogleIcon />
-              <span>Sign in with Student Google SSO</span>
-            </button>
+            <div className="w-full flex justify-center mb-6">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap={false}
+                theme="outline"
+                size="large"
+                width="100%"
+                text="signin_with"
+              />
+            </div>
 
             {/* Divider */}
             <div className="relative flex items-center justify-center mb-6">

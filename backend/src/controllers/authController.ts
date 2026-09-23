@@ -3,9 +3,12 @@ import { AuthenticatedRequest } from '../middlewares/auth';
 import prisma from '../config/prisma';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken, Role } from '../utils/jwt';
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Fallback in-memory user storage if SQLite DB is initializing
-const mockUsers = new Map<string, any>();
+
 
 export const register = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -13,7 +16,6 @@ export const register = async (req: AuthenticatedRequest, res: Response) => {
       fullName,
       email,
       password,
-      role = 'STUDENT',
       university,
       degree,
       branch,
@@ -23,6 +25,7 @@ export const register = async (req: AuthenticatedRequest, res: Response) => {
       phone,
     } = req.body;
 
+    // 1. Basic validation
     if (!fullName || !email || !password) {
       return res.status(400).json({
         status: 'error',
@@ -30,198 +33,217 @@ export const register = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    const assignedRole: Role = role === 'ADMIN' ? 'ADMIN' : 'STUDENT';
+    // 2. Normalize input
     const cleanEmail = email.toLowerCase().trim();
+    const cleanFullName = fullName.trim();
 
-    let user: any = null;
-    let profile: any = null;
-
-    try {
-      const existingUser = await prisma.user.findUnique({
-        where: { email: cleanEmail },
-      });
-
-      if (existingUser) {
-        return res.status(409).json({
-          status: 'error',
-          message: 'An account with this email address already exists.',
-        });
-      }
-
-      const passwordHash = await hashPassword(password);
-
-      const result = await prisma.$transaction(async (tx) => {
-        const newUser = await tx.user.create({
-          data: {
-            fullName,
-            email: cleanEmail,
-            passwordHash,
-            role: assignedRole,
-          },
-        });
-
-        let newProfile = null;
-        if (assignedRole === 'STUDENT') {
-          newProfile = await tx.studentProfile.create({
-            data: {
-              userId: newUser.id,
-              university: university || 'Visvesvaraya Technological University (VTU)',
-              degree: degree || 'B.E.',
-              branch: branch || 'Computer Science & Engineering',
-              semester: semester ? parseInt(semester, 10) : 5,
-              section: section || 'A',
-              graduationYear: graduationYear ? parseInt(graduationYear, 10) : new Date().getFullYear() + 2,
-              phone: phone || null,
-            },
-          });
-        }
-
-        return { user: newUser, profile: newProfile };
-      });
-
-      user = result.user;
-      profile = result.profile;
-    } catch (dbError) {
-      console.warn('Prisma DB write bypassed, using in-memory store:', dbError);
-      const userId = `usr_${Date.now()}`;
-      const passwordHash = await hashPassword(password);
-      
-      user = {
-        id: userId,
-        fullName,
+    // 3. Check if account already exists
+    const existingUser = await prisma.user.findUnique({
+      where: {
         email: cleanEmail,
-        passwordHash,
-        role: assignedRole,
-      };
-
-      profile = {
-        id: `prof_${Date.now()}`,
-        userId,
-        university: university || 'Visvesvaraya Technological University (VTU)',
-        degree: degree || 'B.E.',
-        branch: branch || 'Computer Science & Engineering',
-        semester: semester ? parseInt(semester, 10) : 5,
-        section: section || 'A',
-        graduationYear: graduationYear ? parseInt(graduationYear, 10) : 2026,
-      };
-
-      mockUsers.set(cleanEmail, { user, profile });
-    }
-
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role as Role,
+      },
     });
 
+    if (existingUser) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'An account with this email address already exists.',
+      });
+    }
+
+    // 4. Hash password
+    const passwordHash = await hashPassword(password);
+
+    // 5. Create user + student profile atomically
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          fullName: cleanFullName,
+          email: cleanEmail,
+          passwordHash,
+          role: 'STUDENT',
+        },
+      });
+
+      const profile = await tx.studentProfile.create({
+        data: {
+          userId: user.id,
+          university:
+            university?.trim() ||
+            'Visvesvaraya Technological University (VTU)',
+          degree: degree?.trim() || 'B.E.',
+          branch:
+            branch?.trim() ||
+            'Computer Science & Engineering',
+          semester: semester ? parseInt(semester, 10) : 5,
+          section: section?.trim() || 'A',
+          graduationYear: graduationYear
+            ? parseInt(graduationYear, 10)
+            : new Date().getFullYear() + 2,
+          phone: phone?.trim() || null,
+        },
+      });
+
+      return { user, profile };
+    });
+
+    // 6. Generate JWT
+    const token = generateToken({
+      userId: result.user.id,
+      email: result.user.email,
+      role: result.user.role as Role,
+    });
+
+    // 7. Send response
     return res.status(201).json({
       status: 'success',
       message: 'User registered successfully',
       data: {
         token,
         user: {
-          id: user.id,
-          fullName: user.fullName,
-          email: user.email,
-          role: user.role,
+          id: result.user.id,
+          fullName: result.user.fullName,
+          email: result.user.email,
+          role: result.user.role,
         },
-        profile,
+        profile: result.profile,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Registration Error:', error);
+
     return res.status(500).json({
       status: 'error',
-      message: error.message || 'Internal server error during registration',
+      message: 'Unable to create account. Please try again later.',
     });
   }
 };
 
-export const googleAuth = async (req: AuthenticatedRequest, res: Response) => {
+export const googleAuth = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
-    const { email, fullName, profilePicture, googleId } = req.body;
+    const { credential } = req.body;
 
-    if (!email) {
+    // 1. Make sure Google sent an ID token
+    if (!credential || typeof credential !== 'string') {
       return res.status(400).json({
         status: 'error',
-        message: 'Google authentication requires an email address.',
+        message: 'Google authentication token is required.',
       });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
-    let user: any = null;
-    let profile: any = null;
+    // 2. Verify the token with Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
 
-    try {
-      let existingUser = await prisma.user.findUnique({
-        where: { email: cleanEmail },
-        include: { profile: true },
+    // 3. Get the verified Google account information
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid Google authentication token.',
       });
+    }
 
-      if (!existingUser) {
-        const passwordHash = await hashPassword(`google_oauth_${googleId || Date.now()}`);
-        const result = await prisma.$transaction(async (tx) => {
-          const newUser = await tx.user.create({
-            data: {
-              fullName: fullName || cleanEmail.split('@')[0],
-              email: cleanEmail,
-              passwordHash,
-              role: 'STUDENT',
-            },
-          });
+    // 4. Make sure the Google account has a verified email
+    if (!payload.email || payload.email_verified !== true) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Google email address is not verified.',
+      });
+    }
 
-          const newProfile = await tx.studentProfile.create({
-            data: {
-              userId: newUser.id,
-              university: 'Visvesvaraya Technological University (VTU)',
-              degree: 'B.E.',
-              branch: 'Computer Science & Engineering',
-              semester: 5,
-              section: 'A',
-              graduationYear: 2026,
-              profilePicture: profilePicture || null,
-            },
-          });
+    // 5. Google's stable account identifier
+    const googleId = payload.sub;
 
-          return { ...newUser, profile: newProfile };
+    const cleanEmail = payload.email.toLowerCase().trim();
+
+    // 6. Look for an existing user
+    let user = await prisma.user.findUnique({
+      where: {
+        googleId,
+      },
+      include: {
+        profile: true,
+      },
+    });
+
+    // 7. If no Google-linked account exists, check email
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: {
+          email: cleanEmail,
+        },
+        include: {
+          profile: true,
+        },
+      });
+    }
+
+    // 8. Create a new Student account if necessary
+    if (!user) {
+      const result = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            fullName: payload.name || cleanEmail.split('@')[0],
+            email: cleanEmail,
+            googleId,
+            passwordHash: null,
+            role: 'STUDENT',
+          },
         });
 
-        user = result;
-        profile = result.profile;
-      } else {
-        user = existingUser;
-        profile = existingUser.profile;
+        const newProfile = await tx.studentProfile.create({
+          data: {
+            userId: newUser.id,
+            university: '',
+            degree: '',
+            branch: '',
+            semester: 1,
+            section: '',
+            graduationYear: new Date().getFullYear(),
+            profilePicture: payload.picture || null,
+          },
+        });
+
+        return {
+          ...newUser,
+          profile: newProfile,
+        };
+      });
+
+      user = result;
+    } else {
+      // 9. Don't allow a disabled account to log in
+      if (!user.isActive) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Your account has been disabled.',
+        });
       }
-    } catch (dbError) {
-      console.warn('Prisma DB query bypassed for Google Auth, using in-memory store:', dbError);
-      
-      const stored = mockUsers.get(cleanEmail);
-      if (stored) {
-        user = stored.user;
-        profile = stored.profile;
-      } else {
-        const userId = `usr_google_${Date.now()}`;
-        user = {
-          id: userId,
-          fullName: fullName || cleanEmail.split('@')[0],
-          email: cleanEmail,
-          role: 'STUDENT',
-        };
-        profile = {
-          id: `prof_${Date.now()}`,
-          userId,
-          university: 'Visvesvaraya Technological University (VTU)',
-          degree: 'B.E.',
-          branch: 'Computer Science & Engineering',
-          semester: 5,
-          section: 'A',
-          graduationYear: 2026,
-          profilePicture: profilePicture || null,
-        };
-        mockUsers.set(cleanEmail, { user, profile });
+
+      // 10. Link Google account if this existing account doesn't have one
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: {
+            id: user.id,
+          },
+          data: {
+            googleId,
+          },
+          include: {
+            profile: true,
+          },
+        });
       }
     }
 
+    // 11. Generate our application's JWT
     const token = generateToken({
       userId: user.id,
       email: user.email,
@@ -230,7 +252,7 @@ export const googleAuth = async (req: AuthenticatedRequest, res: Response) => {
 
     return res.status(200).json({
       status: 'success',
-      message: 'Google authentication successful',
+      message: 'Google authentication successful.',
       data: {
         token,
         user: {
@@ -239,14 +261,15 @@ export const googleAuth = async (req: AuthenticatedRequest, res: Response) => {
           email: user.email,
           role: user.role,
         },
-        profile,
+        profile: user.profile,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Google Auth Error:', error);
-    return res.status(500).json({
+
+    return res.status(401).json({
       status: 'error',
-      message: error.message || 'Google authentication failed',
+      message: 'Google authentication failed.',
     });
   }
 };
@@ -255,6 +278,7 @@ export const login = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { email, password } = req.body;
 
+    // 1. Validate required fields
     if (!email || !password) {
       return res.status(400).json({
         status: 'error',
@@ -262,71 +286,65 @@ export const login = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
+    // 2. Normalize email
     const cleanEmail = email.toLowerCase().trim();
-    let user: any = null;
-    let profile: any = null;
 
-    try {
-      const dbUser = await prisma.user.findUnique({
-        where: { email: cleanEmail },
-        include: { profile: true },
-      });
-
-      if (dbUser) {
-        const isMatch = await comparePassword(password, dbUser.passwordHash);
-        if (!isMatch) {
-          return res.status(401).json({
-            status: 'error',
-            message: 'Invalid email address or password.',
-          });
-        }
-        user = dbUser;
-        profile = dbUser.profile;
-      }
-    } catch (dbError) {
-      console.warn('Prisma DB query bypassed for login:', dbError);
-    }
-
-    // Check mockUsers if DB did not match
-    if (!user) {
-      const mock = mockUsers.get(cleanEmail);
-      if (mock) {
-        const isMatch = await comparePassword(password, mock.user.passwordHash);
-        if (isMatch) {
-          user = mock.user;
-          profile = mock.profile;
-        }
-      }
-    }
-
-    // Default demo fallback for seamless student testing
-    if (!user) {
-      const userId = `usr_demo_${Date.now()}`;
-      user = {
-        id: userId,
-        fullName: cleanEmail.split('@')[0].replace('.', ' '),
+    // 3. Find user in PostgreSQL
+    const user = await prisma.user.findUnique({
+      where: {
         email: cleanEmail,
-        role: 'STUDENT',
-      };
-      profile = {
-        id: `prof_demo_${Date.now()}`,
-        userId,
-        university: 'Visvesvaraya Technological University (VTU)',
-        degree: 'B.E.',
-        branch: 'Computer Science & Engineering',
-        semester: 5,
-        section: 'A',
-        graduationYear: 2026,
-      };
-      mockUsers.set(cleanEmail, { user, profile });
+      },
+      include: {
+        profile: true,
+      },
+    });
+
+    // 4. Do not reveal whether the email exists
+    if (!user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid email address or password.',
+      });
     }
 
+    // 5. Check account status
+    if (!user.isActive) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Your account has been disabled.',
+      });
+    }
+
+    // 6. Check whether this is a Google-only account
+    if (!user.passwordHash) {
+      return res.status(401).json({
+        status: 'error',
+        message:
+          'This account uses Google Sign-In. Please continue with Google.',
+      });
+    }
+
+    // 7. Verify password
+    const isMatch = await comparePassword(
+      password,
+      user.passwordHash
+    );
+
+    if (!isMatch) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid email address or password.',
+      });
+    }
+
+    // 8. Generate JWT
     const token = generateToken({
       userId: user.id,
       email: user.email,
       role: user.role as Role,
     });
 
+    // 9. Return authenticated user
     return res.status(200).json({
       status: 'success',
       message: 'Logged in successfully',
@@ -338,20 +356,25 @@ export const login = async (req: AuthenticatedRequest, res: Response) => {
           email: user.email,
           role: user.role,
         },
-        profile,
+        profile: user.profile,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Login Error:', error);
+
     return res.status(500).json({
       status: 'error',
-      message: error.message || 'Internal server error during login',
+      message: 'Unable to process login. Please try again later.',
     });
   }
 };
 
-export const getMe = async (req: AuthenticatedRequest, res: Response) => {
+export const getMe = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
+    // 1. Make sure authentication middleware attached the user
     if (!req.user) {
       return res.status(401).json({
         status: 'error',
@@ -359,51 +382,33 @@ export const getMe = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    let user: any = null;
-    let profile: any = null;
-
-    try {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-        include: { profile: true },
-      });
-      if (dbUser) {
-        user = dbUser;
-        profile = dbUser.profile;
-      }
-    } catch (dbError) {
-      console.warn('Prisma DB query bypassed for getMe:', dbError);
-    }
-
-    if (!user) {
-      for (const [, val] of mockUsers.entries()) {
-        if (val.user.id === req.user.userId || val.user.email === req.user.email) {
-          user = val.user;
-          profile = val.profile;
-          break;
-        }
-      }
-    }
-
-    if (!user) {
-      user = {
+    // 2. Find the actual user in PostgreSQL
+    const user = await prisma.user.findUnique({
+      where: {
         id: req.user.userId,
-        fullName: req.user.email.split('@')[0],
-        email: req.user.email,
-        role: req.user.role || 'STUDENT',
-      };
-      profile = {
-        id: `prof_${req.user.userId}`,
-        userId: req.user.userId,
-        university: 'Visvesvaraya Technological University (VTU)',
-        degree: 'B.E.',
-        branch: 'Computer Science & Engineering',
-        semester: 5,
-        section: 'A',
-        graduationYear: 2026,
-      };
+      },
+      include: {
+        profile: true,
+      },
+    });
+
+    // 3. JWT may be valid, but the account may no longer exist
+    if (!user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'User account no longer exists.',
+      });
     }
 
+    // 4. Check whether the account is active
+    if (!user.isActive) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Your account has been disabled.',
+      });
+    }
+
+    // 5. Return the real database user
     return res.status(200).json({
       status: 'success',
       data: {
@@ -413,14 +418,15 @@ export const getMe = async (req: AuthenticatedRequest, res: Response) => {
           email: user.email,
           role: user.role,
         },
-        profile,
+        profile: user.profile,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('GetMe Error:', error);
+
     return res.status(500).json({
       status: 'error',
-      message: error.message || 'Internal server error fetching user data',
+      message: 'Unable to fetch user information. Please try again later.',
     });
   }
 };
