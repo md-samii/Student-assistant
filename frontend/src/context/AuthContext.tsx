@@ -55,16 +55,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (error) {
-      localStorage.removeItem('token');
+    } catch (error: any) {
+      const status = error.response?.status;
 
-      setState({
-        user: null,
-        profile: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
+      if (status === 401 || status === 403) {
+        // The backend rejected the session.
+        localStorage.removeItem('token');
+
+        setState({
+          user: null,
+          profile: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      } else {
+        // Network error or server unavailable.
+        // Do not delete the saved token.
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+        }));
+
+        console.warn(
+          'Unable to verify session. Please check the backend connection.',
+          error
+        );
+      }
     }
   };
 
@@ -90,6 +107,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       isLoading: false,
     });
   };
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setState({
+        user: null,
+        profile: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+    };
+
+    window.addEventListener(
+      'auth:unauthorized',
+      handleUnauthorized
+    );
+
+    return () => {
+      window.removeEventListener(
+        'auth:unauthorized',
+        handleUnauthorized
+      );
+    };
+  }, []);
 
   const register = async (formData: any) => {
     const response = await api.post('/auth/register', formData);

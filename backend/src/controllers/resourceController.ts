@@ -1,113 +1,326 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth';
 import prisma from '../config/prisma';
-import { DEFAULT_RESOURCES_CATALOG, ResourceSeedItem } from '../utils/resourceSeed';
 
-export const getResources = async (req: AuthenticatedRequest, res: Response) => {
+const RESOURCE_TYPES = [
+  'PDF_NOTES',
+  'PPT',
+  'TUTORIAL',
+  'PREVIOUS_PAPER',
+  'LAB_MANUAL',
+  'CODING_EXERCISE',
+];
+
+const formatResource = (resource: any) => ({
+  ...resource,
+  subjectCode: resource.subject.code,
+  subjectName: resource.subject.name,
+  // Keep this alias for frontend components using fileUrl.
+  fileUrl: resource.driveUrl,
+});
+
+export const getResources = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ status: 'error', message: 'Not authenticated' });
+      return res.status(401).json({
+        status: 'error',
+        message: 'Not authenticated',
+      });
     }
 
     const { subject, moduleNumber, type, search } = req.query;
 
-    let resources: ResourceSeedItem[] = DEFAULT_RESOURCES_CATALOG;
+    const where: any = {};
 
     if (subject) {
-      const subjStr = String(subject).toLowerCase();
-      resources = resources.filter(
-        (r) =>
-          r.subjectName.toLowerCase().includes(subjStr) ||
-          r.subjectCode.toLowerCase().includes(subjStr)
-      );
+      const subjectValue = String(subject).trim();
+
+      where.subject = {
+        OR: [
+          { code: { contains: subjectValue, mode: 'insensitive' } },
+          { name: { contains: subjectValue, mode: 'insensitive' } },
+        ],
+      };
     }
 
-    if (moduleNumber) {
-      const modNum = parseInt(String(moduleNumber), 10);
-      if (!isNaN(modNum)) {
-        resources = resources.filter((r) => r.moduleNumber === modNum);
+    if (moduleNumber !== undefined && moduleNumber !== '') {
+      const parsedModule = Number(moduleNumber);
+
+      if (
+        !Number.isInteger(parsedModule) ||
+        parsedModule < 1
+      ) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'moduleNumber must be a positive integer.',
+        });
       }
+
+      where.moduleNumber = parsedModule;
     }
 
-    if (type && type !== 'ALL') {
-      resources = resources.filter((r) => r.type === String(type));
+    if (type && String(type) !== 'ALL') {
+      if (!RESOURCE_TYPES.includes(String(type))) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid resource type.',
+        });
+      }
+
+      where.type = String(type);
     }
 
     if (search) {
-      const q = String(search).toLowerCase();
-      resources = resources.filter(
-        (r) =>
-          r.title.toLowerCase().includes(q) ||
-          r.description.toLowerCase().includes(q) ||
-          r.subjectName.toLowerCase().includes(q)
-      );
+      const query = String(search).trim();
+
+      if (query) {
+        where.OR = [
+          { title: { contains: query, mode: 'insensitive' } },
+          {
+            description: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            subject: {
+              name: { contains: query, mode: 'insensitive' },
+            },
+          },
+          {
+            subject: {
+              code: { contains: query, mode: 'insensitive' },
+            },
+          },
+        ];
+      }
+    }
+
+    const resources = await prisma.studyResource.findMany({
+      where,
+      include: {
+        subject: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const formattedResources = resources.map(formatResource);
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        total: formattedResources.length,
+        resources: formattedResources,
+      },
+    });
+  } catch (error) {
+    console.error('getResources Error:', error);
+
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to retrieve study resources.',
+    });
+  }
+};
+
+export const createResource = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Not authenticated',
+      });
+    }
+
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Only administrators can create study resources.',
+      });
+    }
+
+    const {
+      title,
+      description,
+      subjectCode,
+      subjectName,
+      moduleNumber,
+      type,
+      driveUrl,
+      fileSize,
+    } = req.body;
+
+    if (
+      typeof title !== 'string' ||
+      !title.trim() ||
+      typeof driveUrl !== 'string' ||
+      !driveUrl.trim()
+    ) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Title and Google Drive URL are required.',
+      });
+    }
+
+    let parsedUrl: URL;
+
+    try {
+      parsedUrl = new URL(driveUrl.trim());
+    } catch {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide a valid URL.',
+      });
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Only HTTP and HTTPS URLs are supported.',
+      });
+    }
+
+    if (
+      !subjectCode &&
+      !subjectName
+    ) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'A subject code or subject name is required.',
+      });
+    }
+
+    const parsedModule = Number(moduleNumber);
+
+    if (
+      !Number.isInteger(parsedModule) ||
+      parsedModule < 1
+    ) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'moduleNumber must be a positive integer.',
+      });
+    }
+
+    const resourceType = type || 'PDF_NOTES';
+
+    if (!RESOURCE_TYPES.includes(resourceType)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid resource type.',
+      });
+    }
+
+    const subject = subjectCode
+      ? await prisma.subject.findUnique({
+        where: {
+          code: String(subjectCode).trim(),
+        },
+      })
+      : await prisma.subject.findFirst({
+        where: {
+          name: {
+            equals: String(subjectName).trim(),
+            mode: 'insensitive',
+          },
+        },
+      });
+
+    if (!subject) {
+      return res.status(404).json({
+        status: 'error',
+        message:
+          'Subject not found. Create the subject before adding resources.',
+      });
+    }
+
+    const resource = await prisma.studyResource.create({
+      data: {
+        title: title.trim(),
+        description:
+          typeof description === 'string'
+            ? description.trim() || null
+            : null,
+        subjectId: subject.id,
+        moduleNumber: parsedModule,
+        type: resourceType,
+        driveUrl: driveUrl.trim(),
+        fileSize:
+          typeof fileSize === 'string'
+            ? fileSize.trim() || null
+            : null,
+        uploadedBy: req.user.email,
+      },
+      include: {
+        subject: true,
+      },
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      message: 'Study resource added successfully.',
+      data: {
+        resource: formatResource(resource),
+      },
+    });
+  } catch (error) {
+    console.error('createResource Error:', error);
+
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to create study resource.',
+    });
+  }
+};
+
+export const getResourceById = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Not authenticated',
+      });
+    }
+
+    const resource = await prisma.studyResource.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        subject: true,
+      },
+    });
+
+    if (!resource) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Resource not found.',
+      });
     }
 
     return res.status(200).json({
       status: 'success',
       data: {
-        total: resources.length,
-        resources,
+        resource: formatResource(resource),
       },
     });
-  } catch (error: any) {
-    console.error('getResources Error:', error);
-    return res.status(500).json({ status: 'error', message: error.message });
-  }
-};
+  } catch (error) {
+    console.error('getResourceById Error:', error);
 
-export const createResource = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ status: 'error', message: 'Not authenticated' });
-    }
-
-    const { title, description, subjectCode, subjectName, moduleNumber, type, driveUrl, fileSize } = req.body;
-
-    if (!title || !driveUrl) {
-      return res.status(400).json({ status: 'error', message: 'Title and Google Drive URL are required.' });
-    }
-
-    const newResource: ResourceSeedItem = {
-      id: `res_${Date.now()}`,
-      title,
-      description: description || '',
-      subjectCode: subjectCode || 'CS501',
-      subjectName: subjectName || 'Operating Systems',
-      moduleNumber: moduleNumber ? parseInt(moduleNumber, 10) : 1,
-      type: type || 'PDF_NOTES',
-      driveUrl,
-      fileSize: fileSize || '3.5 MB',
-      uploadedBy: req.user.email,
-    };
-
-    DEFAULT_RESOURCES_CATALOG.unshift(newResource);
-
-    return res.status(201).json({
-      status: 'success',
-      message: 'Study resource added successfully',
-      data: { resource: newResource },
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to retrieve the study resource.',
     });
-  } catch (error: any) {
-    console.error('createResource Error:', error);
-    return res.status(500).json({ status: 'error', message: error.message });
-  }
-};
-
-export const getResourceById = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const item = DEFAULT_RESOURCES_CATALOG.find((r) => r.id === id);
-
-    if (!item) {
-      return res.status(404).json({ status: 'error', message: 'Resource not found' });
-    }
-
-    return res.status(200).json({
-      status: 'success',
-      data: { resource: item },
-    });
-  } catch (error: any) {
-    return res.status(500).json({ status: 'error', message: error.message });
   }
 };

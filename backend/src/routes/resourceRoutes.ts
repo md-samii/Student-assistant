@@ -5,14 +5,19 @@ import {
   getResourceById,
 } from '../controllers/resourceController';
 import { authenticateToken } from '../middlewares/auth';
-import { cacheMiddleware } from '../middlewares/cacheMiddleware';
 
 const router = Router();
 
+// All resource endpoints require authentication.
 router.use(authenticateToken);
 
-router.get('/', cacheMiddleware(900), getResources);
+// List resources with optional filters.
+router.get('/', getResources);
+
+// Create a resource (the controller enforces admin-only access).
 router.post('/', createResource);
-router.get('/:id', cacheMiddleware(900), getResourceById);
+
+// Get a resource by ID.
+router.get('/:id', getResourceById);
 
 export default router;

@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { 
-  Bot, 
-  Send, 
-  Sparkles, 
-  Bookmark, 
-  BookmarkCheck, 
-  Copy, 
-  Check, 
-  AlertTriangle, 
-  HelpCircle, 
-  Trash2, 
+import ReactMarkdown from 'react-markdown';
+import {
+  Bot,
+  Send,
+  Sparkles,
+  Bookmark,
+  BookmarkCheck,
+  Copy,
+  Check,
+  AlertTriangle,
+  HelpCircle,
+  Trash2,
   Search,
   BookOpen,
   Zap,
@@ -28,7 +29,7 @@ export default function AIAssistant() {
   const [question, setQuestion] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('Operating Systems');
   const [mode, setMode] = useState<'THEORY' | 'CODE' | 'LAB' | 'INTERVIEW' | 'PYQ'>('THEORY');
-  
+
   const [subjectsList, setSubjectsList] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [activeChat, setActiveChat] = useState<any | null>(null);
@@ -50,14 +51,14 @@ export default function AIAssistant() {
       if (res.data.data.subjects?.length > 0) {
         setSelectedSubject(res.data.data.subjects[0].name);
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const fetchHistory = async () => {
     try {
       const res = await api.get('/ai/history');
       setHistory(res.data.data.history || []);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleAskAI = async (e?: React.FormEvent, promptOverride?: string) => {
@@ -74,7 +75,13 @@ export default function AIAssistant() {
         mode: mode,
       });
 
-      const newInteraction = res.data.data.interaction;
+      const newInteraction = {
+        ...res.data.data,
+        answer:
+          res.data.data.aiResponse?.explanation ||
+          'No explanation was returned.',
+      };
+
       setActiveChat(newInteraction);
       setQuestion('');
       await fetchHistory();
@@ -86,7 +93,12 @@ export default function AIAssistant() {
   };
 
   const handleSelectHistory = (item: any) => {
-    setActiveChat(item);
+    setActiveChat({
+      ...item,
+      answer:
+        item.aiResponse?.explanation ||
+        'No explanation was saved for this response.',
+    });
   };
 
   const handleToggleBookmark = async (id: string, currentStatus: boolean) => {
@@ -136,7 +148,7 @@ export default function AIAssistant() {
 
   const filteredHistory = history.filter((h) => {
     const matchesSearch = h.question.toLowerCase().includes(searchHistory.toLowerCase()) ||
-                          h.subject.toLowerCase().includes(searchHistory.toLowerCase());
+      h.subject.toLowerCase().includes(searchHistory.toLowerCase());
     if (activeTab === 'BOOKMARKS') {
       return matchesSearch && h.isBookmarked;
     }
@@ -175,11 +187,10 @@ export default function AIAssistant() {
             <button
               key={m}
               onClick={() => setMode(m as any)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
-                mode === m
-                  ? 'bg-[#134e2f] text-white shadow-sm'
-                  : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
-              }`}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${mode === m
+                ? 'bg-[#134e2f] text-white shadow-sm'
+                : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
+                }`}
             >
               {m}
             </button>
@@ -225,21 +236,19 @@ export default function AIAssistant() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setActiveTab('ALL')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                      activeTab === 'ALL'
-                        ? 'bg-[#134e2f] text-white'
-                        : 'text-[#404942] hover:bg-[#f0f4f0]'
-                    }`}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${activeTab === 'ALL'
+                      ? 'bg-[#134e2f] text-white'
+                      : 'text-[#404942] hover:bg-[#f0f4f0]'
+                      }`}
                   >
                     Recent
                   </button>
                   <button
                     onClick={() => setActiveTab('BOOKMARKS')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1 ${
-                      activeTab === 'BOOKMARKS'
-                        ? 'bg-[#134e2f] text-white'
-                        : 'text-[#404942] hover:bg-[#f0f4f0]'
-                    }`}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition flex items-center gap-1 ${activeTab === 'BOOKMARKS'
+                      ? 'bg-[#134e2f] text-white'
+                      : 'text-[#404942] hover:bg-[#f0f4f0]'
+                      }`}
                   >
                     <Bookmark className="w-3 h-3" /> Saved
                   </button>
@@ -279,11 +288,10 @@ export default function AIAssistant() {
                   <div
                     key={item.id}
                     onClick={() => handleSelectHistory(item)}
-                    className={`p-3 rounded-2xl border text-left cursor-pointer transition flex items-start justify-between gap-2 ${
-                      activeChat?.id === item.id
-                        ? 'bg-[#e8f5e9] border-[#97f3b5] text-[#00361c]'
-                        : 'bg-[#f7faf7] hover:bg-white border-[#e2e8e2] text-[#181c1b]'
-                    }`}
+                    className={`p-3 rounded-2xl border text-left cursor-pointer transition flex items-start justify-between gap-2 ${activeChat?.id === item.id
+                      ? 'bg-[#e8f5e9] border-[#97f3b5] text-[#00361c]'
+                      : 'bg-[#f7faf7] hover:bg-white border-[#e2e8e2] text-[#181c1b]'
+                      }`}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold truncate">{item.question}</p>
@@ -425,7 +433,135 @@ export default function AIAssistant() {
 
                   {/* Render Answer Text */}
                   <div className="text-xs sm:text-sm text-[#181c1b] leading-relaxed whitespace-pre-wrap font-sans">
-                    {activeChat.answer}
+
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => (
+                          <p className="mb-3 last:mb-0">{children}</p>
+                        ),
+                        h1: ({ children }) => (
+                          <h1 className="mb-2 text-lg font-bold">{children}</h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="mb-2 text-base font-bold">{children}</h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="mb-2 text-sm font-bold">{children}</h3>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="mb-3 ml-5 list-disc space-y-1">{children}</ul>
+                        ),
+
+
+
+
+                        ol: ({ children }) => (
+                          <ol className="mb-3 ml-5 list-decimal space-y-2">
+                            {children}
+                          </ol>
+                        ),
+
+                        li: ({ children, ...props }) => (
+                          <li {...props} className="pl-1">
+                            {children}
+                          </li>
+                        ),
+
+                        strong: ({ children }) => (
+                          <strong className="font-semibold">{children}</strong>
+                        ),
+                        code: ({ children }) => (
+                          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.9em]">
+                            {children}
+                          </code>
+                        ),
+                        pre: ({ children }) => (
+                          <pre className="mb-3 overflow-x-auto rounded-lg bg-gray-900 p-3 text-sm text-white">
+                            {children}
+                          </pre>
+                        ),
+                      }}
+                    >
+                      {activeChat.answer}
+                    </ReactMarkdown>
+
+
+
+
+                    {Array.isArray(activeChat?.aiResponse?.sources) &&
+                      activeChat.aiResponse.sources.length > 0 && (
+                        <div className="mt-4 border-t border-gray-200 pt-3">
+                          <h4 className="mb-2 text-sm font-semibold text-gray-700">
+                            Sources
+                          </h4>
+
+                          <ul className="space-y-2">
+
+                            {(
+                              Array.from(
+                                new Map<
+                                  string,
+                                  {
+                                    resourceId: string;
+                                    title: string;
+                                    moduleNumber: number;
+                                    chunkIndex: number;
+                                    url: string;
+                                  }
+                                >(
+                                  activeChat.aiResponse.sources.map(
+                                    (source: {
+                                      resourceId: string;
+                                      title: string;
+                                      moduleNumber: number;
+                                      chunkIndex: number;
+                                      url: string;
+                                    }) => [
+                                        `${source.resourceId}-${source.moduleNumber}`,
+                                        source,
+                                      ]
+                                  )
+                                ).values()
+                              )
+                            ).map((source) => (
+
+                              <li
+                                key={`${source.resourceId}-${source.moduleNumber}`}
+                                className="text-sm text-gray-600"
+                              >
+                                {source.url ? (
+                                  <a
+                                    href={source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      console.log("Source URL:", source.url);
+                                    }}
+                                    className="font-medium text-emerald-700 hover:underline cursor-pointer"
+                                  >
+                                    {source.title}
+                                    <span className="ml-1 text-gray-400">↗</span>
+                                  </a>
+                                ) : (
+                                  <span className="font-medium text-gray-600">
+                                    {source.title}
+                                    <span className="ml-2 text-xs text-red-500">
+                                      (URL missing)
+                                    </span>
+                                  </span>
+                                )}
+
+                                <span className="ml-2">
+                                  Module {source.moduleNumber}
+                                </span>
+                              </li>
+
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                   </div>
                 </div>
               </div>
@@ -445,6 +581,6 @@ export default function AIAssistant() {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }

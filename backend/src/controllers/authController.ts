@@ -226,19 +226,21 @@ export const googleAuth = async (
           message: 'Your account has been disabled.',
         });
       }
+      // 10. Reject a Google account linked to a different Google user
+      if (user.googleId && user.googleId !== googleId) {
+        return res.status(409).json({
+          status: 'error',
+          message:
+            'This email is already linked to a different Google account.',
+        });
+      }
 
-      // 10. Link Google account if this existing account doesn't have one
+      // Prevent automatic linking to an existing account
       if (!user.googleId) {
-        user = await prisma.user.update({
-          where: {
-            id: user.id,
-          },
-          data: {
-            googleId,
-          },
-          include: {
-            profile: true,
-          },
+        return res.status(409).json({
+          status: 'error',
+          message:
+            'An account with this email already exists. Please sign in using your existing login method.',
         });
       }
     }

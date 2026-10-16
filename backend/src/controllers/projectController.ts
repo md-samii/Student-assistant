@@ -104,29 +104,52 @@ export const addProject = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const deleteProject = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteProject = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ status: 'error', message: 'Not authenticated' });
+      res.status(401).json({
+        status: 'error',
+        message: 'Not authenticated',
+      });
+      return;
     }
 
     const { id } = req.params;
 
-    try {
-      await prisma.project.deleteMany({
-        where: {
-          id,
-          userId: req.user.userId,
-        },
-      });
-    } catch (e) {}
+    const project = await prisma.project.findFirst({
+      where: {
+        id,
+        userId: req.user.userId,
+      },
+    });
 
-    return res.status(200).json({
+    if (!project) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Project not found.',
+      });
+      return;
+    }
+
+    await prisma.project.delete({
+      where: {
+        id: project.id,
+      },
+    });
+
+    res.status(200).json({
       status: 'success',
       message: 'Project deleted successfully',
     });
-  } catch (error: any) {
-    console.error('deleteProject Error:', error);
-    return res.status(500).json({ status: 'error', message: error.message });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete project.',
+    });
   }
 };

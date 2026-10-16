@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { AuthenticatedRequest } from '../middlewares/auth';
 
 const prisma = new PrismaClient();
 
@@ -7,38 +8,77 @@ const prisma = new PrismaClient();
  * GET /api/admin/stats
  * Aggregates high-level platform metrics for Administrator Dashboard
  */
-export const getAdminStats = async (req: Request, res: Response): Promise<void> => {
+export const getAdminStats = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const totalStudents = await prisma.user.count({ where: { role: 'STUDENT' } });
-    const activeStudents = await prisma.user.count({ where: { role: 'STUDENT', isActive: true } });
-    const totalSubjects = await prisma.subject.count();
-    const totalResources = await prisma.studyResource.count();
-    const totalQuizzes = await prisma.quiz.count();
-    const totalSubmissions = await prisma.quizSubmission.count();
-    const totalInternships = await prisma.internship.count({ where: { status: 'ACTIVE' } });
-    const totalJobs = await prisma.job.count({ where: { status: 'ACTIVE' } });
-    const totalGovExams = await prisma.governmentExam.count({ where: { status: 'ACTIVE' } });
-    const totalAIChats = await prisma.chatHistory.count();
+    const [
+      totalStudents,
+      activeStudents,
+      totalSubjects,
+      totalResources,
+      totalQuizzes,
+      totalSubmissions,
+      totalInternships,
+      totalJobs,
+      totalGovExams,
+      totalAIChats,
+      recentUsers,
+    ] = await Promise.all([
+      prisma.user.count({
+        where: { role: 'STUDENT' },
+      }),
 
-    const recentUsers = await prisma.user.findMany({
-      where: { role: 'STUDENT' },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        isActive: true,
-        createdAt: true,
-        profile: {
-          select: {
-            university: true,
-            branch: true,
-            semester: true,
+      prisma.user.count({
+        where: {
+          role: 'STUDENT',
+          isActive: true,
+        },
+      }),
+
+      prisma.subject.count(),
+
+      prisma.studyResource.count(),
+
+      prisma.quiz.count(),
+
+      prisma.quizSubmission.count(),
+
+      prisma.internship.count({
+        where: { status: 'ACTIVE' },
+      }),
+
+      prisma.job.count({
+        where: { status: 'ACTIVE' },
+      }),
+
+      prisma.governmentExam.count({
+        where: { status: 'ACTIVE' },
+      }),
+
+      prisma.chatHistory.count(),
+
+      prisma.user.findMany({
+        where: { role: 'STUDENT' },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          isActive: true,
+          createdAt: true,
+          profile: {
+            select: {
+              university: true,
+              branch: true,
+              semester: true,
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     res.status(200).json({
       status: 'success',
@@ -58,9 +98,13 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
         recentUsers,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching admin stats:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch admin stats' });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch admin stats',
+    });
   }
 };
 
@@ -68,27 +112,72 @@ export const getAdminStats = async (req: Request, res: Response): Promise<void> 
  * GET /api/admin/students
  * Paginated student list with search filter
  */
-export const getStudents = async (req: Request, res: Response): Promise<void> => {
+export const getStudents = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const search = (req.query.search as string) || '';
+    const pageParam = req.query.page as string | undefined;
+    const limitParam = req.query.limit as string | undefined;
+    const searchParam = req.query.search as string | undefined;
+
+    const page = pageParam ? Number(pageParam) : 1;
+    const limit = limitParam ? Number(limitParam) : 10;
+    const search = searchParam?.trim() || '';
+
+    // Validate pagination
+    if (!Number.isInteger(page) || page < 1) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Page must be a positive integer.',
+      });
+      return;
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Limit must be an integer between 1 and 100.',
+      });
+      return;
+    }
+
+    // Prevent excessively large offsets
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {
-      role: 'STUDENT',
-      OR: [
-        { fullName: { contains: search } },
-        { email: { contains: search } },
-      ],
+    const whereClause = {
+      role: 'STUDENT' as const,
+      ...(search
+        ? {
+          OR: [
+            {
+              fullName: {
+                contains: search,
+                mode: 'insensitive' as const,
+              },
+            },
+            {
+              email: {
+                contains: search,
+                mode: 'insensitive' as const,
+              },
+            },
+          ],
+        }
+        : {}),
     };
 
-    const total = await prisma.user.count({ where: whereClause });
+    const total = await prisma.user.count({
+      where: whereClause,
+    });
+
     const students = await prisma.user.findMany({
       where: whereClause,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: 'desc',
+      },
       select: {
         id: true,
         email: true,
@@ -118,9 +207,13 @@ export const getStudents = async (req: Request, res: Response): Promise<void> =>
         },
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching student list:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch student list' });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch student list',
+    });
   }
 };
 
@@ -128,45 +221,85 @@ export const getStudents = async (req: Request, res: Response): Promise<void> =>
  * PATCH /api/admin/students/:id/status
  * Toggle student active/deactivated status
  */
-export const toggleStudentStatus = async (req: Request, res: Response): Promise<void> => {
+
+export const toggleStudentStatus = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      res.status(404).json({ status: 'error', message: 'User not found' });
+    // 1. Validate the requested status
+    if (typeof isActive !== 'boolean') {
+      res.status(400).json({
+        status: 'error',
+        message: 'isActive must be a boolean.',
+      });
       return;
     }
 
-    const updatedUser = await prisma.user.update({
+    // 2. Find the target student
+    const user = await prisma.user.findUnique({
       where: { id },
-      data: { isActive: Boolean(isActive) },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        isActive: true,
-      },
     });
 
-    // Record Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId: (req as any).user?.id || null,
-        action: `TOGGLE_STUDENT_STATUS`,
-        details: `Updated user ${user.email} status to ${isActive ? 'ACTIVE' : 'DEACTIVATED'}`,
-      },
+    if (!user) {
+      res.status(404).json({
+        status: 'error',
+        message: 'User not found.',
+      });
+      return;
+    }
+
+    // 3. Only allow student accounts to be modified
+    if (user.role !== 'STUDENT') {
+      res.status(403).json({
+        status: 'error',
+        message: 'Only student accounts can be modified.',
+      });
+      return;
+    }
+
+    // 4. Update the student and record the audit log
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: { isActive },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          isActive: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: req.user!.userId,
+          action: 'TOGGLE_STUDENT_STATUS',
+          details: `Updated student ${user.email} status to ${isActive ? 'ACTIVE' : 'DEACTIVATED'
+            }`,
+        },
+      });
+
+      return updated;
     });
 
+    // 5. Return the updated student
     res.status(200).json({
       status: 'success',
-      message: `Student account status updated to ${isActive ? 'Active' : 'Deactivated'}`,
+      message: `Student account status updated to ${isActive ? 'Active' : 'Deactivated'
+        }`,
       data: { user: updatedUser },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating student status:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to update student status' });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update student status.',
+    });
   }
 };
 
@@ -174,11 +307,16 @@ export const toggleStudentStatus = async (req: Request, res: Response): Promise<
  * GET /api/admin/audit-logs
  * System audit log events
  */
-export const getAuditLogs = async (req: Request, res: Response): Promise<void> => {
+export const getAuditLogs = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const logs = await prisma.auditLog.findMany({
       take: 50,
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
         user: {
           select: {
@@ -192,49 +330,78 @@ export const getAuditLogs = async (req: Request, res: Response): Promise<void> =
 
     res.status(200).json({
       status: 'success',
-      data: { logs },
+      data: {
+        logs,
+      },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching audit logs:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch audit logs' });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch audit logs',
+    });
   }
 };
-
 /**
  * GET /api/admin/export/students
  * CSV Export of all registered students
  */
-export const exportStudentsCSV = async (req: Request, res: Response): Promise<void> => {
+export const exportStudentsCSV = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    let users: any[] = [];
-    try {
-      users = await prisma.user.findMany({
-        where: { role: 'STUDENT' },
-        include: { profile: true },
-        orderBy: { createdAt: 'desc' },
-      });
-    } catch (e) {}
+    const users = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      include: { profile: true },
+      orderBy: { createdAt: 'desc' },
+    });
 
-    let csvContent = 'ID,Full Name,Email,University,Branch,Semester,Status,Created At\n';
-    if (users.length === 0) {
-      csvContent += 'usr_101,Rahul Sharma,rahul@student.edu,Visvesvaraya Technological University,Computer Science,6,ACTIVE,2026-01-15\n';
-      csvContent += 'usr_102,Ananya Roy,ananya@student.edu,Visvesvaraya Technological University,Information Science,5,ACTIVE,2026-02-01\n';
-    } else {
-      users.forEach((u) => {
-        const uni = (u.profile?.university || '').replace(/,/g, ' ');
-        const br = (u.profile?.branch || '').replace(/,/g, ' ');
-        const status = u.isActive ? 'ACTIVE' : 'DEACTIVATED';
-        const date = new Date(u.createdAt).toISOString().split('T')[0];
-        csvContent += `"${u.id}","${u.fullName}","${u.email}","${uni}","${br}",${u.profile?.semester || 1},"${status}","${date}"\n`;
-      });
-    }
+    const escapeCSV = (value: unknown): string => {
+      const stringValue = String(value ?? '');
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=students_export.csv');
+      // Prevent spreadsheet formula injection
+      const safeValue = /^[=+\-@]/.test(stringValue)
+        ? `'${stringValue}`
+        : stringValue;
+
+      return `"${safeValue.replace(/"/g, '""')}"`;
+    };
+
+    let csvContent =
+      'ID,Full Name,Email,University,Branch,Semester,Status,Created At\n';
+
+    users.forEach((user) => {
+      const status = user.isActive ? 'ACTIVE' : 'DEACTIVATED';
+      const date = new Date(user.createdAt).toISOString().split('T')[0];
+
+      csvContent += [
+        escapeCSV(user.id),
+        escapeCSV(user.fullName),
+        escapeCSV(user.email),
+        escapeCSV(user.profile?.university),
+        escapeCSV(user.profile?.branch),
+        escapeCSV(user.profile?.semester ?? ''),
+        escapeCSV(status),
+        escapeCSV(date),
+      ].join(',') + '\n';
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="students_export.csv"'
+    );
+
     res.status(200).send(csvContent);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error exporting students CSV:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to export students CSV' });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to export students CSV',
+    });
   }
 };
 
@@ -242,38 +409,82 @@ export const exportStudentsCSV = async (req: Request, res: Response): Promise<vo
  * GET /api/admin/export/quizzes
  * CSV Export of quiz attempt results
  */
-export const exportQuizzesCSV = async (req: Request, res: Response): Promise<void> => {
+export const exportQuizzesCSV = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    let submissions: any[] = [];
-    try {
-      submissions = await prisma.quizSubmission.findMany({
-        include: {
-          user: { select: { fullName: true, email: true } },
-          quiz: { select: { title: true } },
+    const submissions = await prisma.quizSubmission.findMany({
+      include: {
+        user: {
+          select: {
+            fullName: true,
+            email: true,
+          },
         },
-        orderBy: { submittedAt: 'desc' },
-      });
-    } catch (e) {}
+        quiz: {
+          select: {
+            title: true,
+          },
+        },
+      },
+      orderBy: {
+        submittedAt: 'desc',
+      },
+    });
 
-    let csvContent = 'Submission ID,Student Name,Email,Quiz Title,Score,Total Marks,Percentage,Submitted At\n';
-    if (submissions.length === 0) {
-      csvContent += 'sub_1,Rahul Sharma,rahul@student.edu,Data Structures Trees Quiz,18,20,90%,2026-03-10\n';
-      csvContent += 'sub_2,Ananya Roy,ananya@student.edu,DBMS SQL Joins Quiz,15,20,75%,2026-03-12\n';
-    } else {
-      submissions.forEach((s) => {
-        const title = (s.quiz?.title || 'Quiz').replace(/,/g, ' ');
-        const pct = Math.round((s.score / (s.totalMarks || 1)) * 100);
-        const date = new Date(s.submittedAt).toISOString().split('T')[0];
-        csvContent += `"${s.id}","${s.user?.fullName}","${s.user?.email}","${title}",${s.score},${s.totalMarks},"${pct}%","${date}"\n`;
-      });
-    }
+    const escapeCSV = (value: unknown): string => {
+      const stringValue = String(value ?? '');
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=quiz_submissions_export.csv');
+      // Prevent spreadsheet formula injection
+      const safeValue = /^[=+\-@]/.test(stringValue)
+        ? `'${stringValue}`
+        : stringValue;
+
+      return `"${safeValue.replace(/"/g, '""')}"`;
+    };
+
+    let csvContent =
+      'Submission ID,Student Name,Email,Quiz Title,Score,Total Marks,Percentage,Submitted At\n';
+
+    submissions.forEach((submission) => {
+      const totalMarks = submission.totalMarks || 0;
+
+      const percentage =
+        totalMarks > 0
+          ? Math.round((submission.score / totalMarks) * 100)
+          : 0;
+
+      const date = new Date(submission.submittedAt)
+        .toISOString()
+        .split('T')[0];
+
+      csvContent += [
+        escapeCSV(submission.id),
+        escapeCSV(submission.user?.fullName),
+        escapeCSV(submission.user?.email),
+        escapeCSV(submission.quiz?.title || 'Quiz'),
+        escapeCSV(submission.score),
+        escapeCSV(submission.totalMarks),
+        escapeCSV(`${percentage}%`),
+        escapeCSV(date),
+      ].join(',') + '\n';
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="quiz_submissions_export.csv"'
+    );
+
     res.status(200).send(csvContent);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error exporting quiz CSV:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to export quiz CSV' });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to export quiz CSV',
+    });
   }
 };
 
@@ -281,51 +492,193 @@ export const exportQuizzesCSV = async (req: Request, res: Response): Promise<voi
  * GET /api/admin/reports/content-usage
  * Aggregates analytics metrics for platform report charts
  */
-export const getContentUsageReports = async (req: Request, res: Response): Promise<void> => {
+export const getContentUsageReports = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    let resourceCount = 0;
-    let quizCount = 0;
-    let chatCount = 0;
+    const [
+      resourceCount,
+      quizCount,
+      chatCount,
+      submissions,
+      subjects,
+    ] = await Promise.all([
+      prisma.studyResource.count(),
 
-    try {
-      resourceCount = await prisma.studyResource.count();
-      quizCount = await prisma.quiz.count();
-      chatCount = await prisma.chatHistory.count();
-    } catch (e) {}
+      prisma.quiz.count(),
+
+      prisma.chatHistory.count(),
+
+      prisma.quizSubmission.findMany({
+        select: {
+          score: true,
+          totalMarks: true,
+          submittedAt: true,
+          quiz: {
+            select: {
+              subject: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+
+      prisma.subject.findMany({
+        select: {
+          name: true,
+          _count: {
+            select: {
+              resources: true,
+              quizzes: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    /*
+     * Quiz analytics
+     *
+     * A submission is considered passed when the student
+     * scores at least 50%.
+     */
+    let passed = 0;
+    let failed = 0;
+    let totalPercentage = 0;
+
+    submissions.forEach((submission) => {
+      const percentage =
+        submission.totalMarks > 0
+          ? (submission.score / submission.totalMarks) * 100
+          : 0;
+
+      totalPercentage += percentage;
+
+      if (percentage >= 50) {
+        passed++;
+      } else {
+        failed++;
+      }
+    });
+
+    const avgScorePercentage =
+      submissions.length > 0
+        ? Math.round(totalPercentage / submissions.length)
+        : 0;
+
+    /*
+     * Subject distribution
+     *
+     * Uses the number of resources + quizzes associated
+     * with each subject.
+     */
+    const subjectDistribution = subjects.map((subject) => ({
+      subject: subject.name,
+      count: subject._count.resources + subject._count.quizzes,
+    }));
+
+    /*
+     * Daily activity
+     *
+     * We currently have timestamps for AI chats and quiz
+     * submissions, but the schema does not contain resource
+     * view events.
+     */
+    const dailyActivityMap = new Map<
+      string,
+      {
+        aiQueries: number;
+        quizAttempts: number;
+        resourceViews: number;
+      }
+    >();
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - i);
+
+      const key = date.toISOString().split('T')[0];
+
+      dailyActivityMap.set(key, {
+        aiQueries: 0,
+        quizAttempts: 0,
+        resourceViews: 0,
+      });
+    }
+
+    const recentChats = await prisma.chatHistory.findMany({
+      where: {
+        createdAt: {
+          gte: new Date(
+            new Date().setDate(new Date().getDate() - 6)
+          ),
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    recentChats.forEach((chat) => {
+      const key = chat.createdAt.toISOString().split('T')[0];
+      const activity = dailyActivityMap.get(key);
+
+      if (activity) {
+        activity.aiQueries++;
+      }
+    });
+
+    submissions.forEach((submission) => {
+      const key = submission.submittedAt.toISOString().split('T')[0];
+      const activity = dailyActivityMap.get(key);
+
+      if (activity) {
+        activity.quizAttempts++;
+      }
+    });
+
+    const dailyActivity = Array.from(dailyActivityMap.entries())
+      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+      .map(([date, activity]) => ({
+        day: new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
+          weekday: 'short',
+        }),
+        aiQueries: activity.aiQueries,
+        quizAttempts: activity.quizAttempts,
+        resourceViews: activity.resourceViews,
+      }));
 
     res.status(200).json({
       status: 'success',
       data: {
-        dailyActivity: [
-          { day: 'Mon', aiQueries: 140, quizAttempts: 45, resourceViews: 190 },
-          { day: 'Tue', aiQueries: 185, quizAttempts: 60, resourceViews: 230 },
-          { day: 'Wed', aiQueries: 210, quizAttempts: 80, resourceViews: 310 },
-          { day: 'Thu', aiQueries: 195, quizAttempts: 75, resourceViews: 280 },
-          { day: 'Fri', aiQueries: 240, quizAttempts: 95, resourceViews: 350 },
-          { day: 'Sat', aiQueries: 160, quizAttempts: 50, resourceViews: 210 },
-          { day: 'Sun', aiQueries: 130, quizAttempts: 40, resourceViews: 175 },
-        ],
+        dailyActivity,
+
         quizPassRate: {
-          passed: 78,
-          failed: 22,
-          avgScorePercentage: 82,
+          passed,
+          failed,
+          avgScorePercentage,
         },
-        subjectDistribution: [
-          { subject: 'Data Structures & Algo', count: 420 },
-          { subject: 'Database Management Systems', count: 350 },
-          { subject: 'Artificial Intelligence & ML', count: 290 },
-          { subject: 'Operating Systems', count: 210 },
-          { subject: 'Web Technologies', count: 180 },
-        ],
+
+        subjectDistribution,
+
         overviewTotals: {
-          totalResources: resourceCount || 48,
-          totalQuizzes: quizCount || 15,
-          totalAIChats: chatCount || 1250,
+          totalResources: resourceCount,
+          totalQuizzes: quizCount,
+          totalAIChats: chatCount,
         },
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching content usage reports:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to fetch content usage reports' });
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch content usage reports',
+    });
   }
 };

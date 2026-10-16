@@ -19,14 +19,17 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Global Error Handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear invalid token if request unauthorized
       localStorage.removeItem('token');
+
+      window.dispatchEvent(
+        new Event('auth:unauthorized')
+      );
     }
+
     return Promise.reject(error);
   }
 );

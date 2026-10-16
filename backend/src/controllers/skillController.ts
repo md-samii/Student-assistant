@@ -87,30 +87,53 @@ export const addSkill = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const deleteSkill = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteSkill = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ status: 'error', message: 'Not authenticated' });
+      res.status(401).json({
+        status: 'error',
+        message: 'Not authenticated',
+      });
+      return;
     }
 
     const { id } = req.params;
 
-    try {
-      await prisma.skill.deleteMany({
-        where: {
-          id,
-          userId: req.user.userId,
-        },
-      });
-    } catch (e) {}
+    const skill = await prisma.skill.findFirst({
+      where: {
+        id,
+        userId: req.user.userId,
+      },
+    });
 
-    return res.status(200).json({
+    if (!skill) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Skill not found.',
+      });
+      return;
+    }
+
+    await prisma.skill.delete({
+      where: {
+        id: skill.id,
+      },
+    });
+
+    res.status(200).json({
       status: 'success',
       message: 'Skill deleted successfully',
     });
-  } catch (error: any) {
-    console.error('deleteSkill Error:', error);
-    return res.status(500).json({ status: 'error', message: error.message });
+  } catch (error) {
+    console.error('Error deleting skill:', error);
+
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete skill.',
+    });
   }
 };
 

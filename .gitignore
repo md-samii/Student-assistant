@@ -40,3 +40,8 @@ backend/prisma/*.db
 
 # Design mockups
 stitch-design/
+
+
+
+# Google Drive OAuth credentials
+credentials/

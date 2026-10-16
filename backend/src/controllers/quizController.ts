@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth';
 import prisma from '../config/prisma';
 import { DEFAULT_QUIZ_CATALOG, QuizSeedItem } from '../utils/quizSeed';
+import { recordLearningActivity } from '../services/activityService';
 
 const mockSubmissions = new Map<string, any[]>();
 
@@ -88,25 +89,39 @@ export const getQuizById = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const submitQuiz = async (req: AuthenticatedRequest, res: Response) => {
+export const submitQuiz = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ status: 'error', message: 'Not authenticated' });
+      return res.status(401).json({
+        status: 'error',
+        message: 'Not authenticated',
+      });
     }
 
     const { id } = req.params;
-    const { answers } = req.body; // Object mapping questionId -> selectedOption (0-indexed number)
+    const { answers } = req.body;
 
     const quiz = DEFAULT_QUIZ_CATALOG.find((q) => q.id === id);
+
     if (!quiz) {
-      return res.status(404).json({ status: 'error', message: 'Quiz not found' });
+      return res.status(404).json({
+        status: 'error',
+        message: 'Quiz not found',
+      });
     }
 
     let score = 0;
+
     const breakdown = quiz.questions.map((q) => {
       const selectedOption = answers ? answers[q.id] : undefined;
       const isCorrect = selectedOption === q.correctOption;
-      if (isCorrect) score += 1;
+
+      if (isCorrect) {
+        score += 1;
+      }
 
       return {
         questionId: q.id,
@@ -119,7 +134,9 @@ export const submitQuiz = async (req: AuthenticatedRequest, res: Response) => {
       };
     });
 
-    const percentage = Math.round((score / quiz.totalMarks) * 100);
+    const percentage = Math.round(
+      (score / quiz.totalMarks) * 100
+    );
 
     const submissionResult = {
       submissionId: `sub_${Date.now()}`,
@@ -133,18 +150,33 @@ export const submitQuiz = async (req: AuthenticatedRequest, res: Response) => {
       breakdown,
     };
 
-    const existingUserSubs = mockSubmissions.get(req.user.userId) || [];
+    // Record one learning activity for the completed quiz
+    await recordLearningActivity(req.user.userId, 'QUIZ');
+
+    const existingUserSubs =
+      mockSubmissions.get(req.user.userId) || [];
+
     existingUserSubs.unshift(submissionResult);
-    mockSubmissions.set(req.user.userId, existingUserSubs);
+
+    mockSubmissions.set(
+      req.user.userId,
+      existingUserSubs
+    );
 
     return res.status(200).json({
       status: 'success',
       message: `Quiz completed! Score: ${score}/${quiz.totalMarks} (${percentage}%)`,
-      data: { result: submissionResult },
+      data: {
+        result: submissionResult,
+      },
     });
   } catch (error: any) {
     console.error('submitQuiz Error:', error);
-    return res.status(500).json({ status: 'error', message: error.message });
+
+    return res.status(500).json({
+      status: 'error',
+      message: error.message,
+    });
   }
 };
 

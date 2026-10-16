@@ -15,6 +15,9 @@ import adminRoutes from './routes/adminRoutes';
 import skillRoutes from './routes/skillRoutes';
 import projectRoutes from './routes/projectRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
+import activityRoutes from './routes/activityRoutes';
+import studySessionRoutes from './routes/studySessionRoutes';
 
 dotenv.config({ path: '../.env' });
 if (!process.env.PORT) {
@@ -47,6 +50,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/study-sessions', studySessionRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req: Request, res: Response) => {

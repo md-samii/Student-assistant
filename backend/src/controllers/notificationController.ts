@@ -78,28 +78,53 @@ export const getNotifications = async (req: AuthenticatedRequest, res: Response)
   }
 };
 
-export const markNotificationAsRead = async (req: AuthenticatedRequest, res: Response) => {
+export const markNotificationAsRead = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ status: 'error', message: 'Not authenticated' });
+      return res.status(401).json({
+        status: 'error',
+        message: 'Not authenticated',
+      });
     }
 
     const { id } = req.params;
 
-    try {
-      await prisma.notification.update({
-        where: { id },
-        data: { isRead: true },
+    const notification = await prisma.notification.findFirst({
+      where: {
+        id,
+        OR: [
+          { userId: req.user.userId },
+          { userId: null },
+        ],
+      },
+    });
+
+    if (!notification) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Notification not found.',
       });
-    } catch (e) {}
+    }
+
+    await prisma.notification.update({
+      where: { id },
+      data: { isRead: true },
+    });
 
     return res.status(200).json({
       status: 'success',
       message: 'Notification marked as read',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('markNotificationAsRead Error:', error);
-    return res.status(500).json({ status: 'error', message: error.message });
+
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to mark notification as read',
+    });
   }
 };
 
@@ -119,7 +144,7 @@ export const markAllNotificationsAsRead = async (req: AuthenticatedRequest, res:
         },
         data: { isRead: true },
       });
-    } catch (e) {}
+    } catch (e) { }
 
     return res.status(200).json({
       status: 'success',

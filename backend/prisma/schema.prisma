@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -13,32 +13,36 @@ enum UserRole {
 }
 
 model User {
-  id            String          @id @default(uuid())
-  email         String          @unique
-  passwordHash  String?
-  fullName      String
-  googleId      String?         @unique
-  role          UserRole        @default(STUDENT)
-  isActive      Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  passwordHash          String?
+  fullName              String
+  googleId              String?  @unique
+  role                  UserRole @default(STUDENT)
+  isActive              Boolean  @default(true)
+  dailyStudyGoalMinutes Int      @default(240)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  profile       StudentProfile?
-  chatHistories ChatHistory[]
-  documents     Document[]
-  quizSubmissions QuizSubmission[]
-  skills        Skill[]
-  projects      Project[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
+  profile            StudentProfile?
+  chatHistories      ChatHistory[]
+  documents          Document[]
+  quizSubmissions    QuizSubmission[]
+  skills             Skill[]
+  projects           Project[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  learningActivities LearningActivity[]
+  studySessions      StudySession[]
+  activeStudySession ActiveStudySession?
 
   @@map("users")
 }
 
 model StudentProfile {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   university     String
   degree         String
@@ -52,89 +56,89 @@ model StudentProfile {
   githubUrl      String?
   linkedinUrl    String?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("student_profiles")
 }
 
 model Subject {
-  id          String   @id @default(uuid())
-  code        String   @unique
+  id          String  @id @default(uuid())
+  code        String  @unique
   name        String
   university  String
   branch      String
   semester    Int
   description String?
-  
-  resources   StudyResource[]
-  quizzes     Quiz[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  resources StudyResource[]
+  quizzes   Quiz[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("subjects")
 }
 
 model StudyResource {
-  id           String       @id @default(uuid())
+  id           String          @id @default(uuid())
   title        String
   description  String?
   subjectId    String
-  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject      Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   moduleNumber Int
-  type         String       // PDF_NOTES, PPT, TUTORIAL, PREVIOUS_PAPER, LAB_MANUAL, CODING_EXERCISE
-  driveUrl     String       // Google Drive shareable link
+  type         String // PDF_NOTES, PPT, TUTORIAL, PREVIOUS_PAPER, LAB_MANUAL, CODING_EXERCISE
+  driveUrl     String // Google Drive shareable link
   fileSize     String?
   uploadedBy   String
-
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  chunks       ResourceChunk[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@map("study_resources")
 }
 
 model Quiz {
-  id           String         @id @default(uuid())
+  id           String  @id @default(uuid())
   title        String
   description  String?
   subjectId    String
-  subject      Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject      Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   moduleNumber Int?
   timeLimitMin Int?
   totalMarks   Int
-  
-  questions    QuizQuestion[]
-  submissions  QuizSubmission[]
 
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  questions   QuizQuestion[]
+  submissions QuizSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("quizzes")
 }
 
 model QuizQuestion {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   quizId        String
-  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quiz          Quiz    @relation(fields: [quizId], references: [id], onDelete: Cascade)
   questionText  String
-  options       String   // JSON stringified array of options
-  correctOption Int      // 0-indexed
+  options       String // JSON stringified array of options
+  correctOption Int // 0-indexed
   explanation   String?
 
   @@map("quiz_questions")
 }
 
 model QuizSubmission {
-  id           String   @id @default(uuid())
-  quizId       String
-  quiz         Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  score        Int
-  totalMarks   Int
-  answers      String   // JSON stringified answers
-  submittedAt  DateTime @default(now())
+  id          String   @id @default(uuid())
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score       Int
+  totalMarks  Int
+  answers     String // JSON stringified answers
+  submittedAt DateTime @default(now())
 
   @@map("quiz_submissions")
 }
@@ -153,53 +157,53 @@ model ChatHistory {
 }
 
 model Document {
-  id          String       @id @default(uuid())
+  id          String @id @default(uuid())
   userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
-  type        String       // RESUME, CERTIFICATE, MARKS_CARD, INTERNSHIP_CERTIFICATE
-  fileUrl     String       // Firebase Storage URL
-  storagePath String       // Firebase path
+  type        String // RESUME, CERTIFICATE, MARKS_CARD, INTERNSHIP_CERTIFICATE
+  fileUrl     String // Firebase Storage URL
+  storagePath String // Firebase path
   fileSize    Int
   mimeType    String
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("documents")
 }
 
 model Skill {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   category    String?
-  proficiency String?  // Beginner, Intermediate, Advanced
+  proficiency String? // Beginner, Intermediate, Advanced
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@map("skills")
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   description String
-  techStack   String   // JSON stringified array
+  techStack   String // JSON stringified array
   githubUrl   String?
   liveUrl     String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("projects")
 }
 
 model Internship {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   company     String
   location    String
@@ -208,16 +212,16 @@ model Internship {
   applyUrl    String
   description String
   deadline    DateTime?
-  status      String   @default("ACTIVE")
+  status      String    @default("ACTIVE")
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("internships")
 }
 
 model Job {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   company     String
   location    String
@@ -225,39 +229,39 @@ model Job {
   applyUrl    String
   description String
   deadline    DateTime?
-  status      String   @default("ACTIVE")
+  status      String    @default("ACTIVE")
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("jobs")
 }
 
 model GovernmentExam {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   organizer   String
   eligibility String
   examDate    DateTime?
   applyUrl    String
   description String
-  status      String   @default("ACTIVE")
+  status      String    @default("ACTIVE")
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("government_exams")
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String?  // null means broadcast to all users
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  message   String
-  type      String   // ACADEMIC, QUIZ, CAREER, GENERAL
-  isRead    Boolean  @default(false)
-  linkUrl   String?
+  id      String  @id @default(uuid())
+  userId  String? // null means broadcast to all users
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title   String
+  message String
+  type    String // ACADEMIC, QUIZ, CAREER, GENERAL
+  isRead  Boolean @default(false)
+  linkUrl String?
 
   createdAt DateTime @default(now())
 
@@ -265,9 +269,9 @@ model Notification {
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?  
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id        String  @id @default(uuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   action    String
   ipAddress String?
   details   String?
@@ -275,4 +279,54 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@map("audit_logs")
+}
+
+model LearningActivity {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("learning_activities")
+}
+
+model StudySession {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt       DateTime
+  endedAt         DateTime
+  durationMinutes Int
+  createdAt       DateTime @default(now())
+
+  @@index([userId, startedAt])
+  @@map("study_sessions")
+}
+
+model ActiveStudySession {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("active_study_sessions")
+}
+
+model ResourceChunk {
+  id         String        @id @default(uuid())
+  resourceId String
+  resource   StudyResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  chunkIndex Int
+  content    String @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([resourceId, chunkIndex])
+  @@index([resourceId])
+  @@map("resource_chunks")
 }
