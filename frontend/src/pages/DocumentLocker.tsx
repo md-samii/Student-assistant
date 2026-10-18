@@ -97,8 +97,10 @@ export default function DocumentLocker() {
     try {
       const response = await api.get(`/documents/${id}/${mode === 'view' ? 'file' : 'download'}`, { responseType: 'blob' });
       const url = URL.createObjectURL(response.data);
-      if (mode === 'view') { window.open(url, '_blank', 'noopener,noreferrer'); }
-      else {
+      if (mode === 'view') {
+        const viewer = document.createElement('a'); viewer.href = url; viewer.target = '_blank'; viewer.rel = 'noopener noreferrer';
+        document.body.appendChild(viewer); viewer.click(); viewer.remove();
+      } else {
         const anchor = document.createElement('a'); anchor.href = url;
         anchor.download = documents.find((item) => item.id === id)?.name || 'document.pdf';
         document.body.appendChild(anchor); anchor.click(); anchor.remove();
@@ -110,7 +112,7 @@ export default function DocumentLocker() {
     }
   };
   const handleDeleteDoc = async (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this verified document?')) return;
+    if (!window.confirm('Are you sure you want to permanently delete this document?')) return;
     try {
       await api.delete(`/documents/${id}`);
       setDocuments((prev) => prev.filter((d) => d.id !== id));
