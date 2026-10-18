@@ -24,7 +24,7 @@ export default function DocumentLocker() {
   const { user } = useAuth();
 
   const [documents, setDocuments] = useState<any[]>([]);
-  const [storageUsed, setStorageUsed] = useState('12.4 MB');
+  const [storageUsed, setStorageUsed] = useState('0.00 MB');
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +33,9 @@ export default function DocumentLocker() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [docName, setDocName] = useState('');
   const [docCategory, setDocCategory] = useState('RESUME');
-  const [docFileUrl, setDocFileUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -65,45 +67,54 @@ export default function DocumentLocker() {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!docName.trim() || !docFileUrl.trim()) return;
-
+    setUploadError('');
+    if (!docName.trim()) return setUploadError('Enter a document title.');
+    if (!selectedFile) return setUploadError('Choose a PDF file to upload.');
+    if (selectedFile.size > 5 * 1024 * 1024) return setUploadError('The maximum file size is 5 MB.');
+    if (selectedFile.type !== 'application/pdf') return setUploadError('Only PDF files are allowed.');
     try {
       setIsUploading(true);
-      const res = await api.post('/documents', {
-        name: docName,
-        category: docCategory,
-        type: docCategory,
-        fileUrl: docFileUrl,
-        fileSize: '1.2 MB',
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read file.'));
+        reader.onerror = () => reject(new Error('Could not read file.'));
+        reader.readAsDataURL(selectedFile);
       });
-
-      const newDoc = res.data?.data?.document || {
-        id: `doc_${Date.now()}`,
-        name: docName,
-        category: docCategory,
-        type: docCategory,
-        fileUrl: docFileUrl,
-        fileSize: '1.2 MB',
-        createdAt: new Date().toISOString(),
-        isVerified: true,
-      };
-
+      const res = await api.post('/documents', { name: docName.trim(), category: docCategory, type: docCategory, fileData, mimeType: 'application/pdf' });
+      const newDoc = res.data?.data?.document;
+      if (!newDoc) throw new Error('The server did not return the saved document.');
       setDocuments((prev) => [newDoc, ...prev]);
-      setShowUploadModal(false);
-      setDocName('');
-      setDocFileUrl('');
-    } catch (err) {
+      setShowUploadModal(false); setDocName(''); setSelectedFile(null);
+      await fetchDocuments();
+    } catch (err: any) {
       console.error('Upload document error:', err);
-    } finally {
-      setIsUploading(false);
-    }
+      setUploadError(err.response?.data?.message || err.message || 'Upload failed. Please try again.');
+    } finally { setIsUploading(false); }
   };
 
+  const openDocument = async (id: string, mode: 'view' | 'download') => {
+    setActionError('');
+    try {
+      const response = await api.get(`/documents/${id}/${mode === 'view' ? 'file' : 'download'}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(response.data);
+      if (mode === 'view') { window.open(url, '_blank', 'noopener,noreferrer'); }
+      else {
+        const anchor = document.createElement('a'); anchor.href = url;
+        anchor.download = documents.find((item) => item.id === id)?.name || 'document.pdf';
+        document.body.appendChild(anchor); anchor.click(); anchor.remove();
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err: any) {
+      console.error('Open document error:', err);
+      setActionError(err.response?.data?.message || 'Could not retrieve this document. Older URL-only records may need to be uploaded again.');
+    }
+  };
   const handleDeleteDoc = async (id: string) => {
     if (!window.confirm('Are you sure you want to remove this verified document?')) return;
     try {
       await api.delete(`/documents/${id}`);
       setDocuments((prev) => prev.filter((d) => d.id !== id));
+      await fetchDocuments();
     } catch (err) {
       console.error('Delete document error:', err);
     }
@@ -127,13 +138,13 @@ export default function DocumentLocker() {
       <div className="stitch-card p-6 sm:p-8 bg-white border border-[#e2e8e2] relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Cloud Vault Storage • 256-Bit Encrypted
+            <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> PostgreSQL Document Storage
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">
             Student Document Locker
           </h1>
           <p className="text-[#404942] text-xs sm:text-sm mt-1">
-            Securely manage verified resumes, VTU marks cards, internship certificates & achievement credentials.
+            Store and manage your resumes, VTU marks cards, internship certificates and academic PDFs.
           </p>
         </div>
 
@@ -154,13 +165,13 @@ export default function DocumentLocker() {
               <HardDrive className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-[#181c1b]">Cloud Storage Utilization</p>
-              <p className="text-[11px] text-[#404942]">{storageUsed} used of 500 MB quota</p>
+              <p className="text-xs font-bold text-[#181c1b]">Database Storage Used</p>
+              <p className="text-[11px] text-[#404942]">{storageUsed} used by your documents · 5 MB max per file</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-xs text-[#006d3d] font-semibold bg-[#e8f5e9] px-3.5 py-1.5 rounded-full">
-            <Lock className="w-3.5 h-3.5" /> 256-Bit Encrypted Storage
+            <Lock className="w-3.5 h-3.5" /> Private to your account
           </div>
         </div>
 
@@ -200,6 +211,8 @@ export default function DocumentLocker() {
       </div>
 
       {/* Documents Grid */}
+      {actionError && <div role="alert" className="stitch-card p-3 text-sm text-rose-700 bg-rose-50">{actionError}</div>}
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -210,7 +223,7 @@ export default function DocumentLocker() {
         <div className="stitch-card p-12 text-center space-y-3 bg-white">
           <UploadCloud className="w-10 h-10 text-gray-300 mx-auto" />
           <h3 className="font-bold text-[#181c1b] text-base">No Documents Found</h3>
-          <p className="text-xs text-[#404942]">Click "Upload Document" above to save your first verified credential.</p>
+          <p className="text-xs text-[#404942]">Click "Upload Document" above to save your first PDF.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -226,11 +239,7 @@ export default function DocumentLocker() {
                     <span>{String(doc.category || doc.type || 'Document').replace(/_/g, ' ')}</span>
                   </span>
 
-                  {doc.isVerified && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#006d3d] bg-[#f0f9f4] px-2 py-0.5 rounded-full">
-                      <CheckCircle2 className="w-3 h-3" /> Verified
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#006d3d] bg-[#f0f9f4] px-2 py-0.5 rounded-full">Stored</span>
                 </div>
 
                 <h3 className="font-bold text-base text-[#181c1b] group-hover:text-[#134e2f] transition truncate">
@@ -243,27 +252,13 @@ export default function DocumentLocker() {
               </div>
 
               <div className="pt-4 border-t border-[#e2e8e2] flex items-center justify-between">
-                <a
-                  href={doc.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 rounded-full bg-[#f0f4f0] hover:bg-[#e1e9e1] text-[#181c1b] text-xs font-semibold flex items-center gap-1 transition"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>View Doc</span>
-                </a>
-
+                <button type="button" onClick={() => openDocument(doc.id, 'view')} className="px-3 py-1.5 rounded-full bg-[#f0f4f0] hover:bg-[#e1e9e1] text-[#181c1b] text-xs font-semibold flex items-center gap-1 transition">
+                  <Eye className="w-3.5 h-3.5" /><span>View Doc</span>
+                </button>
                 <div className="flex items-center gap-2">
-                  <a
-                    href={doc.fileUrl}
-                    download
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-1.5 rounded-full bg-[#f0f4f0] hover:bg-[#e1e9e1] text-[#181c1b] transition"
-                    title="Download File"
-                  >
+                  <button type="button" onClick={() => openDocument(doc.id, 'download')} className="p-1.5 rounded-full bg-[#f0f4f0] hover:bg-[#e1e9e1] text-[#181c1b] transition" title="Download File">
                     <Download className="w-3.5 h-3.5" />
-                  </a>
+                  </button>
                   <button
                     onClick={() => handleDeleteDoc(doc.id)}
                     className="p-1.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 transition"
@@ -283,7 +278,7 @@ export default function DocumentLocker() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="w-full max-w-lg stitch-card p-6 sm:p-8 bg-white space-y-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#e2e8e2] pb-3">
-              <h3 className="text-lg font-bold text-[#181c1b]">Upload Verified Academic Document</h3>
+              <h3 className="text-lg font-bold text-[#181c1b]">Upload Academic Document</h3>
               <button
                 onClick={() => setShowUploadModal(false)}
                 className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500"
@@ -320,16 +315,17 @@ export default function DocumentLocker() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#181c1b] mb-1">Cloud Link / File URL</label>
-                <input
-                  type="url"
-                  value={docFileUrl}
-                  onChange={(e) => setDocFileUrl(e.target.value)}
-                  placeholder="https://drive.google.com/file/... or https://firebasestorage.googleapis.com/..."
-                  className="w-full px-4 py-2 rounded-full bg-[#f7faf7] border border-[#c0c9bf] focus:border-[#134e2f] text-xs text-[#181c1b] outline-none"
-                  required
-                />
+                <label className="block text-xs font-semibold text-[#181c1b] mb-1">PDF File (maximum 5 MB)</label>
+                <input type="file" accept="application/pdf,.pdf" onChange={(e) => {
+                  const file = e.target.files?.[0] || null; setUploadError('');
+                  if (file && file.size > 5 * 1024 * 1024) { setSelectedFile(null); setUploadError('The maximum file size is 5 MB.'); e.currentTarget.value = ''; return; }
+                  if (file && file.type !== 'application/pdf') { setSelectedFile(null); setUploadError('Only PDF files are allowed.'); e.currentTarget.value = ''; return; }
+                  setSelectedFile(file);
+                  if (file && !docName.trim()) setDocName(file.name.replace(/\.pdf$/i, ''));
+                }} className="w-full px-4 py-2 rounded-xl bg-[#f7faf7] border border-[#c0c9bf] focus:border-[#134e2f] text-xs text-[#181c1b] outline-none" required />
+                {selectedFile && <p className="mt-2 text-xs text-[#404942]">{selectedFile.name} · {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>}
               </div>
+              {uploadError && <p role="alert" className="text-xs text-rose-600">{uploadError}</p>}
 
               <div className="pt-2 flex items-center justify-end gap-3">
                 <button
