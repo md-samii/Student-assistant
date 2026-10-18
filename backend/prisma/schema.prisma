@@ -162,10 +162,11 @@ model Document {
   user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   type        String // RESUME, CERTIFICATE, MARKS_CARD, INTERNSHIP_CERTIFICATE
-  fileUrl     String // Firebase Storage URL
-  storagePath String // Firebase path
+  fileUrl     String // Legacy field retained for existing records
+  storagePath String // Legacy field retained for existing records
   fileSize    Int
   mimeType    String
+  fileData    Bytes? // PDF bytes stored directly in PostgreSQL BYTEA
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
