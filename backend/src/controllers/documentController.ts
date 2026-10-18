@@ -24,12 +24,19 @@ export const getDocuments = async (req: AuthenticatedRequest, res: Response) => 
       return res.status(400).json({ status: 'error', message: 'Invalid document category.' });
     }
 
-    const documents = await prisma.document.findMany({
-      where: { userId: req.user.userId, ...(filter && filter !== 'ALL' ? { type: filter } : {}) },
-      select: { id: true, name: true, type: true, fileSize: true, mimeType: true, createdAt: true, updatedAt: true, fileData: false },
-      orderBy: { createdAt: 'desc' },
-    });
-    const totalBytes = documents.reduce((sum, document) => sum + document.fileSize, 0);
+    const [documents, storageAggregate] = await Promise.all([
+      prisma.document.findMany({
+        where: { userId: req.user.userId, ...(filter && filter !== 'ALL' ? { type: filter } : {}) },
+        select: { id: true, name: true, type: true, fileSize: true, mimeType: true, createdAt: true, updatedAt: true, fileData: false },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.document.aggregate({
+        where: { userId: req.user.userId },
+        _sum: { fileSize: true },
+      }),
+    ]);
+    // Storage is account-wide, independent of the selected category filter.
+    const totalBytes = storageAggregate._sum.fileSize || 0;
     const storageUsed = `${(totalBytes / (1024 * 1024)).toFixed(2)} MB`;
 
     return res.status(200).json({
@@ -45,7 +52,6 @@ export const getDocuments = async (req: AuthenticatedRequest, res: Response) => 
           fileSizeFormatted: formatSize(document.fileSize),
           uploadedAt: document.createdAt,
           isVerified: false,
-          hasFileData: true,
         })),
       },
     });
