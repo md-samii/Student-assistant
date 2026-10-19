@@ -1,13 +1,14 @@
+
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request Interceptor: Attach JWT Token
+// Attach JWT token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -24,12 +25,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-
-      window.dispatchEvent(
-        new Event('auth:unauthorized')
-      );
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
-
     return Promise.reject(error);
   }
 );
