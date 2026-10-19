@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { api } from '../services/api';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -25,6 +26,7 @@ import {
 
 export default function AIAssistant() {
   const { profile } = useAuth();
+  const { confirm } = useConfirm();
 
   const [question, setQuestion] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('Operating Systems');
@@ -43,6 +45,21 @@ export default function AIAssistant() {
     fetchSubjects();
     fetchHistory();
   }, []);
+
+
+  function normalizeMarkdown(markdown: string): string {
+    return markdown
+      .split("\n")
+      .map((line) => {
+        // Fix escaped pipes in Markdown table rows.
+        if (line.trimStart().startsWith("\\|")) {
+          return line.replace(/\\\|/g, "|");
+        }
+        return line;
+      })
+      .join("\n");
+  }
+
 
   const fetchSubjects = async () => {
     try {
@@ -130,7 +147,14 @@ export default function AIAssistant() {
   };
 
   const handleClearAllHistory = async () => {
-    if (!window.confirm('Are you sure you want to clear all chat history?')) return;
+    const isConfirmed = await confirm({
+      title: 'Clear Chat History?',
+      message: 'Are you sure you want to clear all chat history? This will permanently remove your previous AI study conversations.',
+      confirmText: 'Clear All History',
+      cancelText: 'Cancel',
+      type: 'danger',
+    });
+    if (!isConfirmed) return;
     try {
       await api.delete('/ai/history');
       setHistory([]);
@@ -165,36 +189,12 @@ export default function AIAssistant() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Top AI Header Banner */}
-      <div className="stitch-card p-6 sm:p-8 bg-white border border-[#e2e8e2] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#134e2f] text-white flex items-center justify-center shadow-sm shrink-0">
-            <Bot className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Academic AI Tutoring Engine
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">AI Academic Assistant</h1>
-            <p className="text-[#404942] text-xs sm:text-sm mt-0.5">
-              Syllabus Context: {profile?.university || 'VTU'} • {profile?.branch || 'CS'} • Semester {profile?.semester || 6}
-            </p>
-          </div>
-        </div>
-
-        {/* Mode Selector */}
-        <div className="flex flex-wrap items-center gap-2">
-          {['THEORY', 'CODE', 'LAB', 'INTERVIEW', 'PYQ'].map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m as any)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${mode === m
-                ? 'bg-[#134e2f] text-white shadow-sm'
-                : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
-                }`}
-            >
-              {m}
-            </button>
-          ))}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#181c1b] tracking-tight">AI Academic Assistant</h1>
+          <p className="text-[#404942] text-xs sm:text-sm mt-1">
+            Syllabus Context: {profile?.university || 'VTU'} • {profile?.branch || 'CS'} • Semester {profile?.semester || 6}
+          </p>
         </div>
       </div>
 
@@ -202,13 +202,29 @@ export default function AIAssistant() {
         {/* Left Drawer: Subject Scope & History */}
         <div className="lg:col-span-4 space-y-4">
           <div className="stitch-card p-5 space-y-4 bg-white">
-            <button
-              onClick={() => setActiveChat(null)}
-              className="w-full py-2.5 px-4 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.98]"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>+ New Query</span>
-            </button>
+
+            {/* Mode Selector */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-[#404942]">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Focus Mode:
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {['THEORY', 'CODE', 'LAB', 'INTERVIEW', 'PYQ'].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m as any)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer ${mode === m
+                      ? 'bg-[#134e2f] text-white shadow-sm'
+                      : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
+                      }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Subject Selector */}
             <div className="space-y-1.5">
@@ -358,27 +374,7 @@ export default function AIAssistant() {
               </button>
             </form>
 
-            {/* Quick Prompts */}
-            <div className="space-y-1.5 pt-1">
-              <span className="text-[11px] font-bold text-[#404942] uppercase tracking-wider">
-                Quick Prompts:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {quickPrompts.map((qp, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setSelectedSubject(qp.subject);
-                      setMode(qp.mode as any);
-                      handleAskAI(undefined, qp.text);
-                    }}
-                    className="px-3 py-1.5 rounded-full bg-[#f0f4f0] hover:bg-[#e1e9e1] border border-[#e2e8e2] text-[11px] font-semibold text-[#181c1b] transition"
-                  >
-                    {qp.text}
-                  </button>
-                ))}
-              </div>
-            </div>
+
           </div>
 
           {/* Active Chat Conversation Card */}
@@ -448,6 +444,40 @@ export default function AIAssistant() {
                         h3: ({ children }) => (
                           <h3 className="mb-2 text-sm font-bold">{children}</h3>
                         ),
+
+                        table: ({ children }) => (
+                          <div className="my-4 w-full overflow-x-auto rounded-xl border border-[#dce5dc]">
+                            <table className="w-full min-w-[520px] border-collapse text-left text-xs sm:text-sm">
+                              {children}
+                            </table>
+                          </div>
+                        ),
+                        thead: ({ children }) => (
+                          <thead className="bg-[#e8f5e9] text-[#134e2f]">
+                            {children}
+                          </thead>
+                        ),
+                        tbody: ({ children }) => (
+                          <tbody className="divide-y divide-[#e2e8e2] bg-white">
+                            {children}
+                          </tbody>
+                        ),
+                        tr: ({ children }) => (
+                          <tr className="even:bg-[#f7faf7]">
+                            {children}
+                          </tr>
+                        ),
+                        th: ({ children }) => (
+                          <th className="border-b border-[#dce5dc] px-3 py-3 font-semibold whitespace-normal">
+                            {children}
+                          </th>
+                        ),
+                        td: ({ children }) => (
+                          <td className="px-3 py-3 align-top whitespace-normal leading-relaxed">
+                            {children}
+                          </td>
+                        ),
+
                         ul: ({ children }) => (
                           <ul className="mb-3 ml-5 list-disc space-y-1">{children}</ul>
                         ),
@@ -482,7 +512,7 @@ export default function AIAssistant() {
                         ),
                       }}
                     >
-                      {activeChat.answer}
+                      {normalizeMarkdown(activeChat.answer)}
                     </ReactMarkdown>
 
 

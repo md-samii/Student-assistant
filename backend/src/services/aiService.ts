@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import prisma from '../config/prisma';
+import { ingestGoogleDriveResource } from './pdfIngestionService';
 
 
 
@@ -129,13 +130,10 @@ const retrieveRelevantNotes = async (
     ),
   ];
 
-  if (keywords.length === 0) {
-    return { context: '', sources: [] };
-  }
-
-
+  // Find only PDF notes attached to the selected subject.
   const resources = await prisma.studyResource.findMany({
     where: {
+      type: 'PDF_NOTES',
       subject: {
         is: {
           name: {
@@ -153,8 +151,37 @@ const retrieveRelevantNotes = async (
     },
   });
 
-
   if (resources.length === 0) {
+    return { context: '', sources: [] };
+  }
+
+  // Index PDFs on demand, reusing any resource that already has chunks.
+  // A failed PDF is skipped so it cannot block other PDFs for this subject.
+  for (const resource of resources) {
+    try {
+      const existingChunkCount = await prisma.resourceChunk.count({
+        where: { resourceId: resource.id },
+      });
+
+      if (existingChunkCount > 0) {
+        continue;
+      }
+
+      const result = await ingestGoogleDriveResource(resource.id);
+      console.log(
+        `[RAG] Indexed "${resource.title}": ${result.chunkCount} chunks.`,
+      );
+    } catch (error) {
+      console.warn(
+        `[RAG] Skipping "${resource.title}" during on-demand indexing:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  // Questions without searchable keywords can still trigger indexing, but
+  // cannot be matched reliably against chunks.
+  if (keywords.length === 0) {
     return { context: '', sources: [] };
   }
 
@@ -276,13 +303,16 @@ const retrieveRelevantNotes = async (
 
 
   // Return the three highest-ranked sources with their resource URLs.
-  const sources = ranked.slice(0, 3).map(chunk => ({
+
+  // Return sources only for the chunks actually selected for the answer.
+  const sources = ordered.map(chunk => ({
     resourceId: chunk.resourceId,
     title: chunk.resource.title,
     moduleNumber: chunk.resource.moduleNumber,
     chunkIndex: chunk.chunkIndex,
     url: chunk.resource.driveUrl
   }));
+
 
 
   const seenContent = new Set<string>();
@@ -396,17 +426,15 @@ ${notesContext || 'No relevant notes were found for this question.'}
 
 
 Instructions:
-1. Treat the retrieved study notes as the primary source for the answer.
-2. Read all retrieved passages before deciding whether the topic is covered.
-3. Under "According to your notes", include only information directly supported by the retrieved passages.
-4. If the notes provide partial information, clearly state what they support and what they do not specify.
-5. Put relevant information beyond the retrieved notes under a separate heading, "Additional explanation".
-6. Clearly distinguish general academic knowledge from information taken from the notes.
-7. If the retrieved notes do not contain the answer, acknowledge this explicitly before providing any relevant general academic explanation.
-8. Never invent facts, quotations, page numbers, or claims about what the notes contain.
-9. Keep the retrieved resource citations and source links attached to the response.
-10. Explain concepts clearly at an engineering-student level.
-11. Return only a valid JSON object with the required response fields.
+1. If relevant study-note passages are provided, use them as the primary source and answer in your own words at an engineering-student level.
+2. Do not claim that information comes from the notes unless the supplied passages support that claim.
+3. If the notes support only part of the answer, explain the supported part and clearly label additional general knowledge as "Additional explanation (not verified against your notes)".
+4. If no relevant study-note passages are provided, answer the student's question using your general academic knowledge. Start the explanation with: "General knowledge (not verified against your study notes):".
+5. When no passages are provided, do not use headings such as "According to your notes" and do not imply that the answer was checked against the notes.
+6. Never invent facts, quotations, page numbers, or claims about what the notes contain.
+7. Resource source links are supplied separately by the application. Do not invent URLs or citations.
+8. Give a clear, useful, exam-ready answer appropriate for the student's subject and mode.
+9. Return only a valid JSON object with the required response fields.
 
 {
   "explanation": "Step-by-step explanation",
@@ -424,7 +452,7 @@ Use empty strings and empty arrays for inapplicable fields.
 `;
 
       const response = await gemini.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
         contents: question,
         config: {
           systemInstruction: systemPrompt,
@@ -441,9 +469,18 @@ Use empty strings and empty arrays for inapplicable fields.
 
       const parsed = JSON.parse(content);
 
+      const explanation =
+        parsed.explanation || 'No explanation was returned.';
+
+      const isGeneralKnowledgeOnly = explanation
+        .trimStart()
+        .startsWith(
+          'General knowledge (not verified against your study notes):'
+        );
+
       return {
-        sources: noteSources,
-        explanation: parsed.explanation || 'No explanation was returned.',
+        sources: isGeneralKnowledgeOnly ? [] : noteSources,
+        explanation,
         keyPoints: Array.isArray(parsed.keyPoints)
           ? parsed.keyPoints
           : [],
@@ -510,16 +547,6 @@ Use empty strings and empty arrays for inapplicable fields.
     sources: noteSources,
   };
 
-  // Preserve the original response structure and identify fallback output.
-  if (noteSources.length > 0) {
-    fallback.explanation +=
-      '\n\nNote: The notes were retrieved, but the AI service was unavailable. This response was generated by the local fallback and has not been verified against those notes.';
-  }
-
-  return {
-    ...fallback,
-    sources: noteSources,
-  };
 };
 
 

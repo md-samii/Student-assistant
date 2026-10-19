@@ -3,24 +3,41 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import {
   User as UserIcon,
-  Building2,
   Phone,
-  Sparkles,
   CheckCircle2,
   Save,
   Github,
   Linkedin,
-  ShieldCheck,
-  Award,
   BookOpen,
   Calendar,
   Share2,
-  Download,
-  ArrowUpRight
+  ArrowUpRight,
+  Plus,
+  X,
+  Code,
+  GraduationCap
 } from 'lucide-react';
 
+const SUGGESTED_SKILLS = [
+  'React',
+  'TypeScript',
+  'JavaScript',
+  'Python',
+  'Node.js',
+  'Java',
+  'C++',
+  'SQL',
+  'PostgreSQL',
+  'Docker',
+  'Git & GitHub',
+  'Machine Learning',
+  'Tailwind CSS',
+  'AWS',
+  'Data Structures & Algorithms',
+];
+
 export default function Profile() {
-  const { user, profile, refetchUser } = useAuth();
+  const { user, profile, skills: authSkills, refetchUser } = useAuth();
 
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
@@ -29,16 +46,21 @@ export default function Profile() {
       'Visvesvaraya Technological University (VTU)',
     degree: profile?.degree || 'B.E.',
     branch: profile?.branch || 'Computer Science & Engineering',
-    semester: profile?.semester || 6,
+    semester: profile?.semester || 1,
     section: profile?.section || 'A',
     graduationYear: profile?.graduationYear || 2027,
     phone: profile?.phone || '',
     bio:
       profile?.bio ||
       'Computer Science student passionate about AI, Full-Stack Web Development, and Distributed Cloud Technologies.',
-    githubUrl: profile?.githubUrl || 'https://github.com',
-    linkedinUrl: profile?.linkedinUrl || 'https://linkedin.com',
+    githubUrl: profile?.githubUrl || '',
+    linkedinUrl: profile?.linkedinUrl || '',
   });
+
+  // savedSkills powers the top cards; formSkills is the draft edited in the form below
+  const [savedSkills, setSavedSkills] = useState<string[]>([]);
+  const [formSkills, setFormSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState('');
 
   const [yearlyActivity, setYearlyActivity] = useState<
     { date: string; count: number }[]
@@ -52,13 +74,72 @@ export default function Profile() {
   });
 
   const [isLoadingActivity, setIsLoadingActivity] = useState(true);
-
   const [isSaving, setIsSaving] = useState(false);
-
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+
+  // Load detailed profile and skills on mount
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const response = await api.get('/profile');
+        if (response.data?.data) {
+          const { user: u, profile: p, skills: s } = response.data.data;
+          if (u || p) {
+            setFormData((prev) => ({
+              ...prev,
+              fullName: u?.fullName || prev.fullName,
+              university: p?.university || prev.university,
+              degree: p?.degree || prev.degree,
+              branch: p?.branch || prev.branch,
+              semester: p?.semester !== undefined ? p.semester : prev.semester,
+              section: p?.section || prev.section,
+              graduationYear: p?.graduationYear || prev.graduationYear,
+              phone: p?.phone || prev.phone,
+              bio: p?.bio ?? prev.bio,
+              githubUrl: p?.githubUrl ?? prev.githubUrl,
+              linkedinUrl: p?.linkedinUrl ?? prev.linkedinUrl,
+            }));
+          }
+          if (Array.isArray(s) && s.length > 0) {
+            const loaded = s.map((item: any) => (typeof item === 'string' ? item : item.name));
+            setSavedSkills(loaded);
+            setFormSkills(loaded);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load full profile:', err);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
+
+  useEffect(() => {
+    if (profile) {
+      setFormData((prev) => ({
+        ...prev,
+        fullName: user?.fullName || prev.fullName,
+        university: profile.university || prev.university,
+        degree: profile.degree || prev.degree,
+        branch: profile.branch || prev.branch,
+        semester: profile.semester || prev.semester,
+        section: profile.section || prev.section,
+        graduationYear: profile.graduationYear || prev.graduationYear,
+        phone: profile.phone ?? prev.phone,
+        bio: profile.bio ?? prev.bio,
+        githubUrl: profile.githubUrl ?? prev.githubUrl,
+        linkedinUrl: profile.linkedinUrl ?? prev.linkedinUrl,
+      }));
+    }
+    if (authSkills && authSkills.length > 0 && savedSkills.length === 0) {
+      const fallback = authSkills.map((item: any) => (typeof item === 'string' ? item : item.name));
+      setSavedSkills(fallback);
+      setFormSkills(fallback);
+    }
+  }, [profile, user, authSkills]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -71,6 +152,20 @@ export default function Profile() {
     });
   };
 
+  const handleAddSkill = (skillToAdd?: string) => {
+    const raw = (skillToAdd || skillInput).trim();
+    if (!raw) return;
+    const exists = formSkills.some((s) => s.toLowerCase() === raw.toLowerCase());
+    if (!exists) {
+      setFormSkills((prev) => [...prev, raw]);
+    }
+    setSkillInput('');
+  };
+
+  const handleRemoveSkill = (skillToRemove: string) => {
+    setFormSkills((prev) => prev.filter((s) => s !== skillToRemove));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
@@ -78,9 +173,13 @@ export default function Profile() {
     try {
       setIsSaving(true);
 
-      await api.put('/profile', formData);
+      await api.put('/profile', {
+        ...formData,
+        skills: formSkills,
+      });
 
       await refetchUser();
+      setSavedSkills([...formSkills]);
 
       setMessage({
         type: 'success',
@@ -158,31 +257,20 @@ export default function Profile() {
 
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-          <div className="relative z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs font-semibold">
-            <ShieldCheck className="w-4 h-4 text-[#97f3b5]" />
-            <span>
-              {formData.university} · Department of Engineering
-            </span>
-          </div>
 
-          <div className="relative z-10 text-[11px] text-[#97f3b5] bg-black/30 backdrop-blur-md px-3 py-0.5 rounded-full font-mono">
-            Student Profile
-          </div>
+
+
         </div>
 
         {/* Profile Details Deck */}
+        {/* Profile Details Deck */}
         <div className="p-6 sm:p-8 pt-0 relative">
-
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-12 pb-6 border-b border-[#ecefec]">
-
             {/* Avatar & Core Identity */}
             <div className="flex items-end gap-4">
-
               <div className="relative">
                 <div className="w-24 h-24 rounded-2xl ring-4 ring-white shadow-md bg-[#134e2f] text-white flex items-center justify-center text-3xl font-extrabold">
-                  {user?.fullName
-                    ? user.fullName[0]
-                    : 'S'}
+                  {user?.fullName ? user.fullName[0] : 'S'}
                 </div>
 
                 <span
@@ -193,61 +281,98 @@ export default function Profile() {
                 </span>
               </div>
 
-              <div className="space-y-1">
-
+              <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-extrabold text-[#181c1b] tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">
                     {user?.fullName || 'Student Scholar'}
                   </h1>
 
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-bold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-bold border border-[#a0d2af]/50">
                     Semester {formData.semester}
                   </span>
                 </div>
 
-                <p className="text-xs sm:text-sm text-[#404942] flex items-center gap-2">
-                  <span>
+                <p className="text-xs sm:text-sm text-[#404942] flex flex-wrap items-center gap-2">
+                  <span className="font-medium">
                     {formData.degree} in {formData.branch}
                   </span>
-
-                  <span className="text-[#c0c9bf]">
-                    •
-                  </span>
-
+                  <span className="text-[#c0c9bf]">•</span>
                   <span className="text-[#006d3d] font-semibold">
-                    Student Profile
+                    Visvesvaraya Technological University (VTU)
                   </span>
                 </p>
-
               </div>
             </div>
 
-            {/* Action Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
-
+            {/* Action Toolbar - Only Edit Profile button above */}
+            <div className="flex items-center gap-2 pt-2 md:pt-0">
               <button
+                type="button"
                 onClick={() => {
-                  const formEl =
-                    document.getElementById(
-                      'edit-profile-form'
-                    );
-
-                  formEl?.scrollIntoView({
-                    behavior: 'smooth',
-                  });
+                  const formEl = document.getElementById('edit-profile-form');
+                  formEl?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="px-4 py-2 rounded-full bg-[#134e2f] text-white text-xs font-semibold hover:bg-[#0e3b24] transition shadow-sm active:scale-95"
+                className="px-5 py-2.5 rounded-full bg-[#134e2f] text-white text-xs font-bold hover:bg-[#0e3b24] transition shadow-sm active:scale-95"
               >
                 Edit Profile
               </button>
+            </div>
+          </div>
+
+          {/* Academic Bio / Summary */}
+          {formData.bio && formData.bio.trim() && (
+            <div className="py-4 border-b border-[#ecefec]">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#134e2f] mb-1">
+                <BookOpen className="w-3.5 h-3.5 text-[#006d3d]" />
+                <span>Bio &amp; About</span>
+              </div>
+              <p className="text-xs sm:text-sm text-[#404942] leading-relaxed max-w-3xl">
+                {formData.bio}
+              </p>
+            </div>
+          )}
+
+          {/* Profile Metadata & Bottom Actions */}
+          <div className="pt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+            {/* Left: Expected Graduation only */}
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#ecefec] text-[#404942] font-medium">
+              <Calendar className="w-3.5 h-3.5 text-[#717971]" />
+              <span>Expected Graduation: {formData.graduationYear}</span>
+            </div>
+
+            {/* Right: Logo-only buttons for GitHub, LinkedIn, and Share */}
+            <div className="flex items-center gap-2">
+              {formData.githubUrl && formData.githubUrl.trim() && (
+                <a
+                  href={formData.githubUrl.startsWith('http') ? formData.githubUrl : `https://${formData.githubUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="GitHub Profile"
+                  aria-label="GitHub Profile"
+                  className="w-8 h-8 rounded-full border border-[#c0c9bf] bg-white hover:bg-[#ecefec] hover:border-[#181c1b] text-[#181c1b] flex items-center justify-center transition shadow-2xs active:scale-95"
+                >
+                  <Github className="w-4 h-4" />
+                </a>
+              )}
+
+              {formData.linkedinUrl && formData.linkedinUrl.trim() && (
+                <a
+                  href={formData.linkedinUrl.startsWith('http') ? formData.linkedinUrl : `https://${formData.linkedinUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="LinkedIn Profile"
+                  aria-label="LinkedIn Profile"
+                  className="w-8 h-8 rounded-full border border-[#a0d2af] bg-[#f4fbf4] hover:bg-[#e8f5e9] hover:border-[#006d3d] text-[#0a66c2] flex items-center justify-center transition shadow-2xs active:scale-95"
+                >
+                  <Linkedin className="w-4 h-4" />
+                </a>
+              )}
 
               <button
+                type="button"
                 onClick={async () => {
                   try {
-                    await navigator.clipboard.writeText(
-                      window.location.href
-                    );
-
+                    await navigator.clipboard.writeText(window.location.href);
                     setMessage({
                       type: 'success',
                       text: 'Profile URL copied to clipboard.',
@@ -259,51 +384,26 @@ export default function Profile() {
                     });
                   }
                 }}
-                className="px-4 py-2 rounded-full border border-[#c0c9bf] bg-white text-[#181c1b] text-xs font-semibold hover:bg-[#ecefec] transition flex items-center gap-1.5"
+                title="Share Profile URL"
+                aria-label="Share Profile URL"
+                className="w-8 h-8 rounded-full border border-[#c0c9bf] bg-white hover:bg-[#ecefec] hover:border-[#181c1b] text-[#404942] hover:text-[#181c1b] flex items-center justify-center transition shadow-2xs active:scale-95"
               >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Share Portfolio</span>
+                <Share2 className="w-4 h-4" />
               </button>
-
             </div>
-          </div>
-
-          {/* Profile Metadata */}
-          <div className="pt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-
-            <div className="flex flex-wrap items-center gap-2">
-
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ecefec] text-[#404942]">
-                <Calendar className="w-3.5 h-3.5 text-[#717971]" />
-
-                <span>
-                  Expected Graduation:{' '}
-                  {formData.graduationYear}
-                </span>
-              </div>
-
-            </div>
-
-            <div className="text-[#404942]">
-              Profile information
-            </div>
-
           </div>
         </div>
       </section>
 
       {/* SECTION 2: ACADEMIC PROFILE SUMMARY */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
         <div className="p-6 rounded-3xl bg-[#134e2f] text-white shadow-sm">
           <span className="text-xs font-medium text-white/80 uppercase tracking-wider">
             Current Semester
           </span>
-
           <div className="text-3xl font-extrabold mt-3">
             {formData.semester}
           </div>
-
           <p className="text-xs text-[#97f3b5] mt-1">
             Active academic semester
           </p>
@@ -313,11 +413,9 @@ export default function Profile() {
           <span className="text-xs font-semibold text-[#404942]">
             Degree
           </span>
-
           <div className="text-xl font-extrabold text-[#181c1b] mt-3">
             {formData.degree}
           </div>
-
           <p className="text-xs text-[#717971] mt-1">
             {formData.branch}
           </p>
@@ -327,11 +425,9 @@ export default function Profile() {
           <span className="text-xs font-semibold text-[#404942]">
             Graduation Year
           </span>
-
           <div className="text-3xl font-extrabold text-[#181c1b] mt-3">
             {formData.graduationYear}
           </div>
-
           <p className="text-xs text-[#717971] mt-1">
             Expected graduation
           </p>
@@ -339,18 +435,55 @@ export default function Profile() {
 
         <div className="p-6 rounded-3xl bg-white border border-[#e2e8e2] shadow-sm">
           <span className="text-xs font-semibold text-[#404942]">
-            University
+            Skills Added
           </span>
-
-          <div className="text-sm font-bold text-[#181c1b] mt-3 leading-relaxed">
-            {formData.university}
+          <div className="text-3xl font-extrabold text-[#181c1b] mt-3">
+            {savedSkills.length}
           </div>
-
-          <p className="text-xs text-[#717971] mt-1">
-            Academic institution
+          <p className="text-xs text-[#006d3d] font-semibold mt-1">
+            {savedSkills.length === 1 ? 'Technical skill' : 'Technical skills'}
           </p>
         </div>
+      </section>
 
+      {/* SECTION 3: SKILLS & TECHNICAL STACK */}
+      <section className="bg-white border border-[#e2e8e2] rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#ecefec] pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-[#181c1b]">
+              Technical Skills &amp; Competencies
+            </h2>
+            <p className="text-xs text-[#717971] mt-0.5">
+              Verified programming languages, frameworks, developer tools, and domain proficiencies.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#e8f5e9] text-[#134e2f] border border-[#a0d2af]">
+              {savedSkills.length} {savedSkills.length === 1 ? 'Skill' : 'Skills'}
+            </span>
+          </div>
+        </div>
+
+        {savedSkills.length > 0 ? (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {savedSkills.map((skill) => (
+              <span
+                key={skill}
+                className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-[#e8f5e9] text-[#134e2f] text-xs font-bold border border-[#a0d2af]/70 shadow-2xs hover:bg-[#d8eedb] transition"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-[#f7faf7] border border-[#e2e8e2] text-center space-y-2">
+            <Code className="w-6 h-6 text-[#134e2f] mx-auto opacity-70" />
+            <p className="text-xs font-bold text-[#181c1b]">No skills added yet</p>
+            <p className="text-xs text-[#717971] max-w-md mx-auto">
+              Add your technical skills, programming languages, and frameworks below in the profile edit form to highlight them on your student profile.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* SUCCESS / ERROR MESSAGE */}
@@ -675,8 +808,8 @@ export default function Profile() {
                                         <div
                                           key={dateKey}
                                           title={`${count} ${count === 1
-                                              ? 'activity'
-                                              : 'activities'
+                                            ? 'activity'
+                                            : 'activities'
                                             } on ${formattedDate}`}
                                           className={`w-3 h-3 rounded-[2px] ${getActivityClass(
                                             count
@@ -798,58 +931,29 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="sm:col-span-2">
-
+          <div>
             <label className="block text-xs font-semibold text-[#181c1b] mb-1">
-              University / Institute
+              Graduation Year
             </label>
 
             <div className="relative">
-
-              <Building2 className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Calendar className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
 
               <input
-                type="text"
-                name="university"
-                value={formData.university}
+                type="number"
+                name="graduationYear"
+                min={2000}
+                max={2040}
+                value={formData.graduationYear}
                 onChange={handleChange}
+                placeholder="2027"
                 className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
                 required
               />
-
             </div>
-
           </div>
 
           <div>
-
-            <label className="block text-xs font-semibold text-[#181c1b] mb-1">
-              Branch / Specialization
-            </label>
-
-            <select
-              name="branch"
-              value={formData.branch}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
-            >
-              <option value="Computer Science & Engineering">
-                Computer Science & Engineering
-              </option>
-
-              <option value="Information Science & Engineering">
-                Information Science & Engineering
-              </option>
-
-              <option value="Electronics & Communication">
-                Electronics & Communication
-              </option>
-            </select>
-
-          </div>
-
-          <div>
-
             <label className="block text-xs font-semibold text-[#181c1b] mb-1">
               Active Semester
             </label>
@@ -860,25 +964,103 @@ export default function Profile() {
               onChange={handleChange}
               className="w-full px-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
             >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(
-                (s) => (
-                  <option key={s} value={s}>
-                    Semester {s}
-                  </option>
-                )
-              )}
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                <option key={s} value={s}>
+                  Semester {s}
+                </option>
+              ))}
             </select>
+          </div>
 
+          {/* Add Skills Section */}
+          <div className="sm:col-span-2 space-y-3 pt-3 border-t border-[#ecefec]">
+            <div>
+              <label className="block text-xs font-semibold text-[#181c1b] mb-1">
+                Skills &amp; Technical Competencies
+              </label>
+              <p className="text-[11px] text-[#717971] mb-2">
+                Type your skills (e.g. React, Python, Docker) and press Enter or select from quick suggestions.
+              </p>
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Code className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSkill();
+                      }
+                    }}
+                    placeholder="e.g. React, Python, Machine Learning, Docker..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddSkill()}
+                  disabled={!skillInput.trim()}
+                  className="px-5 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50 active:scale-95 shrink-0 shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Skill</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Added skills chips */}
+            {formSkills.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-[#f7faf7] border border-[#e2e8e2]">
+                {formSkills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#e8f5e9] text-[#134e2f] border border-[#a0d2af] text-xs font-semibold shadow-2xs"
+                  >
+                    <span>{skill}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSkill(skill)}
+                      className="p-0.5 rounded-full hover:bg-rose-100 hover:text-rose-700 transition"
+                      title={`Remove ${skill}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Suggestions */}
+            <div>
+              <span className="text-[11px] font-semibold text-[#717971] block mb-1.5">
+                Quick Suggestions:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_SKILLS.filter(
+                  (s) => !formSkills.some((existing) => existing.toLowerCase() === s.toLowerCase())
+                ).slice(0, 10).map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => handleAddSkill(suggestion)}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-[#c0c9bf] text-[11px] font-medium text-[#404942] hover:border-[#134e2f] hover:bg-[#f4fbf4] hover:text-[#134e2f] transition shadow-2xs"
+                  >
+                    + {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div>
-
             <label className="block text-xs font-semibold text-[#181c1b] mb-1">
               GitHub Profile URL
             </label>
 
             <div className="relative">
-
               <Github className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
 
               <input
@@ -886,21 +1068,18 @@ export default function Profile() {
                 name="githubUrl"
                 value={formData.githubUrl}
                 onChange={handleChange}
+                placeholder="https://github.com/your-username"
                 className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
               />
-
             </div>
-
           </div>
 
           <div>
-
             <label className="block text-xs font-semibold text-[#181c1b] mb-1">
               LinkedIn Profile URL
             </label>
 
             <div className="relative">
-
               <Linkedin className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
 
               <input
@@ -908,15 +1087,13 @@ export default function Profile() {
                 name="linkedinUrl"
                 value={formData.linkedinUrl}
                 onChange={handleChange}
+                placeholder="https://linkedin.com/in/your-username"
                 className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
               />
-
             </div>
-
           </div>
 
           <div className="sm:col-span-2">
-
             <label className="block text-xs font-semibold text-[#181c1b] mb-1">
               Academic Summary / Bio
             </label>
@@ -926,9 +1103,9 @@ export default function Profile() {
               rows={3}
               value={formData.bio}
               onChange={handleChange}
+              placeholder="Tell others about your academic passions, projects, and career goals..."
               className="w-full px-4 py-2.5 rounded-2xl bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
             />
-
           </div>
 
         </div>

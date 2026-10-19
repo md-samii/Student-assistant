@@ -31,23 +31,41 @@ export const getResources = async (
       });
     }
 
-    const { subject, moduleNumber, type, search } = req.query;
+    const { subject, subjectCode, semester, moduleNumber, module, type, search } = req.query;
 
     const where: any = {};
 
-    if (subject) {
-      const subjectValue = String(subject).trim();
+    // Filter by Semester
+    if (semester) {
+      const parsedSemester = Number(semester);
+      if (Number.isInteger(parsedSemester) && parsedSemester >= 1 && parsedSemester <= 8) {
+        where.subject = {
+          ...(where.subject || {}),
+          semester: parsedSemester,
+        };
+      }
+    }
+
+    // Filter by Subject (Exact Code, Name, or Substring)
+    const activeSubject = subjectCode || subject;
+    if (activeSubject && String(activeSubject).trim() !== '' && String(activeSubject).toUpperCase() !== 'ALL') {
+      const subjectValue = String(activeSubject).trim();
 
       where.subject = {
+        ...(where.subject || {}),
         OR: [
+          { code: { equals: subjectValue, mode: 'insensitive' } },
+          { name: { equals: subjectValue, mode: 'insensitive' } },
           { code: { contains: subjectValue, mode: 'insensitive' } },
           { name: { contains: subjectValue, mode: 'insensitive' } },
         ],
       };
     }
 
-    if (moduleNumber !== undefined && moduleNumber !== '') {
-      const parsedModule = Number(moduleNumber);
+    // Filter by Module (accepts moduleNumber or module)
+    const activeModule = moduleNumber !== undefined && moduleNumber !== '' ? moduleNumber : module;
+    if (activeModule !== undefined && activeModule !== '' && String(activeModule).toUpperCase() !== 'ALL') {
+      const parsedModule = Number(activeModule);
 
       if (
         !Number.isInteger(parsedModule) ||

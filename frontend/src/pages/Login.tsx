@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { GraduationCap, Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, Sparkles, ShieldCheck } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import AnimatedAcademicBackground from '../components/AnimatedAcademicBackground';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -33,6 +35,7 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login, loginWithGoogle, isAuthenticated, isLoading } = useAuth();
+  const { alert: customAlert } = useConfirm();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -91,62 +94,47 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-10 px-4 animate-fade-in relative">
+    <div className="w-full flex items-center justify-center py-2 -translate-y-4 sm:-translate-y-6 animate-fade-in relative">
       <main className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 rounded-[28px] stitch-card overflow-hidden shadow-[0_20px_60px_-15px_rgba(19,78,47,0.08)] bg-white relative z-10">
         {/* Left Side: Graphic & Branding */}
-        <div className="hidden lg:flex flex-col justify-between p-12 bg-[#134e2f] text-white relative overflow-hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white text-[#134e2f] flex items-center justify-center shadow-md font-bold">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-white leading-none">Student Assistant</span>
-              <span className="text-[11px] text-emerald-200/90 font-medium mt-0.5">Academic & Career Suite</span>
-            </div>
-          </div>
+        <div className="hidden lg:flex flex-col justify-between p-10 bg-[#134e2f] text-white relative overflow-hidden">
+          {/* Subtle Decorative Background Accents */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="space-y-4 max-w-md my-auto relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-emerald-100 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-300" /> Academic Workflow Platform
-            </div>
-            <h2 className="text-3xl font-extrabold leading-tight text-white tracking-tight">
-              Plan, prioritize, and accomplish your academic goals with ease.
+          <div className="space-y-4 max-w-md my-auto relative z-10 -translate-y-10 sm:-translate-y-14">
+            <h2 className="text-3xl sm:text-4xl font-extrabold leading-tight text-white tracking-tight">
+              Welcome
             </h2>
-            <p className="text-sm text-emerald-100/85 leading-relaxed">
-              Tailored study notes, AI concept tutoring, adaptive practice quizzes, and verified engineering internships in one unified sanctuary.
+            <p className="text-sm sm:text-base text-emerald-100/90 leading-relaxed font-normal">
+              Study smarter with engineering notes, AI study help, practice quizzes, and job opportunities — all in one place.
             </p>
           </div>
 
-          <div className="pt-6 border-t border-white/20 text-xs text-emerald-200 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-300" /> VTU, Autonomous & Engineering Curriculums Supported
+          <div className="pt-6 border-t border-white/20 text-xs text-emerald-200 font-semibold flex items-center gap-2 relative z-10">
+            <ShieldCheck className="w-4 h-4 text-[#97f3b5] shrink-0" />
+            <span>Your All-in-One Academic and Career Companion</span>
           </div>
         </div>
 
         {/* Right Side: Login Form */}
-        <div className="flex flex-col justify-center p-8 sm:p-12 bg-white w-full">
+        <div className="flex flex-col justify-center p-6 sm:p-9 bg-white w-full">
           <div className="w-full max-w-md mx-auto">
             {/* Mobile Header */}
-            <div className="lg:hidden flex items-center gap-2.5 mb-6 justify-center">
-              <div className="w-9 h-9 rounded-full bg-[#134e2f] text-white flex items-center justify-center">
-                <GraduationCap className="w-4 h-4" />
-              </div>
-              <span className="font-extrabold text-lg text-[#181c1b]">Student Assistant</span>
-            </div>
-
-            <div className="mb-8 text-center lg:text-left">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">Welcome Back</h2>
-              <p className="text-xs text-[#404942] mt-1.5">Sign in to access your personalized student dashboard</p>
+            <div className="lg:hidden flex flex-col items-center justify-center mb-4 text-center">
+              <h2 className="text-2xl font-extrabold text-[#181c1b] tracking-tight">Welcome Back,</h2>
+              <p className="text-xs text-[#404942] mt-1">Study smarter with Student Assistant</p>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-3">
+              <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-3">
                 <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Google Sign-In */}
-            <div className="w-full flex justify-center mb-6">
+            <div className="w-full flex justify-center mb-4">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={handleGoogleError}
@@ -159,7 +147,7 @@ export default function Login() {
             </div>
 
             {/* Divider */}
-            <div className="relative flex items-center justify-center mb-6">
+            <div className="relative flex items-center justify-center mb-4">
               <div className="border-t border-[#e2e8e2] w-full"></div>
               <span className="bg-white px-3 text-[10px] font-bold tracking-widest text-[#717971] uppercase shrink-0">
                 Or with credentials
@@ -214,9 +202,17 @@ export default function Login() {
                   <input type="checkbox" className="rounded text-[#134e2f] focus:ring-[#134e2f]" defaultChecked />
                   <span>Remember this device</span>
                 </label>
-                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert("Please contact institutional admin or reset through your VTU student email."); }} className="font-semibold text-[#134e2f] hover:underline">
+                <button
+                  type="button"
+                  onClick={() => customAlert({
+                    title: "Password Reset",
+                    message: "Please contact institutional admin or reset through your VTU student email.",
+                    type: "info"
+                  })}
+                  className="font-semibold text-[#134e2f] hover:underline bg-transparent border-0 p-0 cursor-pointer"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
 
               <button

@@ -10,6 +10,7 @@ out/
 # Environment variables
 .env
 .env.*
+!.env.example
 *.env
 
 # Logs

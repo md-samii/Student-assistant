@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { 
-  BookOpen, 
-  FileText, 
-  Presentation, 
-  FileCheck, 
-  FlaskConical, 
-  Video, 
-  Search, 
-  ExternalLink, 
-  Eye, 
-  X, 
-  Sparkles, 
+import {
+  BookOpen,
+  FileText,
+  Presentation,
+  FileCheck,
+  FlaskConical,
+  Video,
+  Search,
+  ExternalLink,
+  Eye,
+  X,
+  Sparkles,
   Layers,
   HardDrive,
   Download,
@@ -42,29 +43,41 @@ export default function StudyResources() {
 
   useEffect(() => {
     fetchPersonalizedSubjects();
-  }, []);
+  }, [profile?.semester]);
 
   useEffect(() => {
     fetchResources();
-  }, [selectedSubject, selectedModule, selectedType, searchQuery]);
+  }, [selectedSubject, selectedModule, selectedType, searchQuery, profile?.semester]);
 
   const fetchPersonalizedSubjects = async () => {
     try {
-      const res = await api.get('/profile/subjects');
+      const sem = profile?.semester || 6;
+      const res = await api.get('/profile/subjects', { params: { semester: sem } });
       const list = res.data.data.subjects || [];
       setSubjectsList(list);
       if (list.length > 0) {
-        setSelectedSubject(list[0].name);
+        setSelectedSubject((prev) => prev && list.some((item: any) => item.code === prev) ? prev : list[0].code);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to load personalized subjects:', e);
+    }
   };
 
   const fetchResources = async () => {
     try {
       setIsLoading(true);
       const params: any = {};
-      if (selectedSubject) params.subject = selectedSubject;
-      if (selectedModule !== 'ALL') params.module = selectedModule;
+      const activeSem = profile?.semester || 6;
+      params.semester = activeSem;
+
+      if (selectedSubject && selectedSubject !== 'ALL') {
+        params.subjectCode = selectedSubject;
+        params.subject = selectedSubject;
+      }
+      if (selectedModule !== 'ALL') {
+        params.moduleNumber = selectedModule;
+        params.module = selectedModule;
+      }
       if (selectedType !== 'ALL') params.type = selectedType;
       if (searchQuery) params.search = searchQuery;
 
@@ -97,22 +110,14 @@ export default function StudyResources() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in pb-12">
       {/* Header Banner */}
-      <div className="stitch-card p-6 sm:p-8 bg-white border border-[#e2e8e2] relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Cloud Curriculum Repository • Sem {profile?.semester || 6}
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#181c1b] tracking-tight">
             Syllabus Notes & Study Materials
           </h1>
-          <p className="text-[#404942] text-xs sm:text-sm mt-1">
+          <p className="text-xs sm:text-sm text-[#404942] mt-1">
             Curated PDF notes, PPTs, lab manuals & solved question papers for {profile?.branch || 'Computer Science'}.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f0f9f4] border border-[#c0c9bf]/60 text-xs font-semibold text-[#134e2f] shrink-0">
-          <HardDrive className="w-4 h-4 text-[#006d3d]" />
-          <span>Drive Viewer Active</span>
         </div>
       </div>
 
@@ -120,15 +125,23 @@ export default function StudyResources() {
       <div className="stitch-card p-5 space-y-4 bg-white">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <button
+              onClick={() => setSelectedSubject('ALL')}
+              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${selectedSubject === 'ALL'
+                ? 'bg-[#134e2f] text-white shadow-sm'
+                : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
+                }`}
+            >
+              All Semester {profile?.semester || 6}
+            </button>
             {subjectsList.map((s) => (
               <button
                 key={s.code}
-                onClick={() => setSelectedSubject(s.name)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${
-                  selectedSubject === s.name
-                    ? 'bg-[#134e2f] text-white shadow-sm'
-                    : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
-                }`}
+                onClick={() => setSelectedSubject(s.code)}
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${selectedSubject === s.code
+                  ? 'bg-[#134e2f] text-white shadow-sm'
+                  : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1] border border-[#e2e8e2]'
+                  }`}
               >
                 {s.code} — {s.name}
               </button>
@@ -154,11 +167,10 @@ export default function StudyResources() {
             <button
               key={mod}
               onClick={() => setSelectedModule(mod as any)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                selectedModule === mod
-                  ? 'bg-[#134e2f] text-white'
-                  : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1]'
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition ${selectedModule === mod
+                ? 'bg-[#134e2f] text-white'
+                : 'bg-[#f0f4f0] text-[#181c1b] hover:bg-[#e1e9e1]'
+                }`}
             >
               {mod === 'ALL' ? 'All Modules' : `Module ${mod}`}
             </button>
@@ -173,11 +185,10 @@ export default function StudyResources() {
               <button
                 key={t.key}
                 onClick={() => setSelectedType(t.key)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition ${
-                  selectedType === t.key
-                    ? 'bg-[#006d3d] text-white'
-                    : 'bg-[#f0f4f0] text-[#404942] hover:bg-[#e1e9e1]'
-                }`}
+                className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition ${selectedType === t.key
+                  ? 'bg-[#006d3d] text-white'
+                  : 'bg-[#f0f4f0] text-[#404942] hover:bg-[#e1e9e1]'
+                  }`}
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{t.label}</span>
@@ -258,44 +269,55 @@ export default function StudyResources() {
       )}
 
       {/* Embedded Document Preview Modal */}
-      {previewResource && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-5xl h-[85vh] stitch-card bg-white flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-[#e2e8e2] flex items-center justify-between bg-[#f7faf7]">
-              <div className="flex items-center gap-2 truncate">
-                <BookOpen className="w-5 h-5 text-[#134e2f]" />
-                <span className="font-bold text-sm text-[#181c1b] truncate">{previewResource.title}</span>
+      {previewResource &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in font-sans"
+            onClick={() => setPreviewResource(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="w-full max-w-5xl h-[85vh] rounded-[28px] bg-white border border-[#e2e8e2] flex flex-col overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-[#e2e8e2] flex items-center justify-between bg-[#f7faf7]">
+                <div className="flex items-center gap-2 truncate">
+                  <BookOpen className="w-5 h-5 text-[#134e2f]" />
+                  <span className="font-bold text-sm text-[#181c1b] truncate">{previewResource.title}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={previewResource.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="stitch-btn-primary py-1.5 px-4 text-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Open Full PDF</span>
+                  </a>
+                  <button
+                    onClick={() => setPreviewResource(null)}
+                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                    aria-label="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <a
-                  href={previewResource.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="stitch-btn-primary py-1.5 px-4 text-xs"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Open Full PDF</span>
-                </a>
-                <button
-                  onClick={() => setPreviewResource(null)}
-                  className="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              <div className="flex-1 bg-gray-100 p-2">
+                <iframe
+                  src={formatDrivePreviewUrl(previewResource.fileUrl)}
+                  className="w-full h-full rounded-2xl border border-gray-200"
+                  title={previewResource.title}
+                />
               </div>
             </div>
-
-            <div className="flex-1 bg-gray-100 p-2">
-              <iframe
-                src={formatDrivePreviewUrl(previewResource.fileUrl)}
-                className="w-full h-full rounded-2xl border border-gray-200"
-                title={previewResource.title}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

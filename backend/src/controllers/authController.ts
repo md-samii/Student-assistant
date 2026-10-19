@@ -391,6 +391,7 @@ export const getMe = async (
       },
       include: {
         profile: true,
+        skills: true,
       },
     });
 
@@ -421,6 +422,7 @@ export const getMe = async (
           role: user.role,
         },
         profile: user.profile,
+        skills: user.skills || [],
       },
     });
   } catch (error) {

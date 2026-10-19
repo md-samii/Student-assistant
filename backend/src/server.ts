@@ -18,6 +18,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import activityRoutes from './routes/activityRoutes';
 import studySessionRoutes from './routes/studySessionRoutes';
+import { startDailySyncScheduler } from './services/jobDiscoveryService';
 
 dotenv.config({ path: '../.env' });
 if (!process.env.PORT) {
@@ -131,6 +132,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Backend Server running on port ${PORT}`);
   console.log(`🔗 Health Check: http://localhost:5000/api/health`);
   console.log(`=================================`);
+  startDailySyncScheduler();
 });
 
 export default app;

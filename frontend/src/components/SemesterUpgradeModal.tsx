@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, ArrowRight, BookOpen, CheckCircle2, GraduationCap, X } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -41,13 +42,25 @@ export const SemesterUpgradeModal: React.FC<SemesterUpgradeModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in font-sans">
-      <div className="relative w-full max-w-lg rounded-3xl bg-white border border-[#e2e8e2] p-6 sm:p-8 shadow-2xl overflow-hidden">
-        {/* Close button */}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in font-sans"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="relative w-full max-w-lg rounded-[28px] bg-white border border-[#e2e8e2] p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Ambient Emerald Accent Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24 rounded-full blur-2xl pointer-events-none opacity-40 bg-emerald-400" />
+
+        {/* Close 'X' Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-[#717971] hover:text-[#181c1b] rounded-full bg-[#ecefec] transition"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+          aria-label="Close"
         >
           <X className="w-4 h-4" />
         </button>
@@ -65,12 +78,12 @@ export const SemesterUpgradeModal: React.FC<SemesterUpgradeModalProps> = ({
         ) : (
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#e8f5e9] text-[#134e2f] border border-[#a0d2af] flex items-center justify-center">
-                <GraduationCap className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#134e2f] border border-emerald-200/80 flex items-center justify-center shadow-sm">
+                <GraduationCap className="w-6 h-6 stroke-[2.2]" />
               </div>
               <div>
                 <span className="text-xs font-semibold text-[#006d3d] uppercase tracking-wider">Academic Progression</span>
-                <h2 className="text-xl font-bold text-[#181c1b]">Upgrade Academic Semester</h2>
+                <h2 className="text-xl font-extrabold text-[#181c1b] tracking-tight">Upgrade Academic Semester</h2>
               </div>
             </div>
 
@@ -111,7 +124,7 @@ export const SemesterUpgradeModal: React.FC<SemesterUpgradeModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-full border border-[#c0c9bf] bg-white hover:bg-[#ecefec] text-xs font-semibold text-[#404942]"
+                className="px-5 py-2.5 rounded-full border border-[#c0c9bf] bg-white hover:bg-[#ecefec] text-xs font-semibold text-[#404942] transition cursor-pointer active:scale-95"
               >
                 Cancel
               </button>
@@ -119,7 +132,7 @@ export const SemesterUpgradeModal: React.FC<SemesterUpgradeModalProps> = ({
                 type="button"
                 onClick={handleUpgrade}
                 disabled={isUpgrading}
-                className="px-6 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-bold transition shadow-sm flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                className="px-6 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-bold transition shadow-sm flex items-center gap-2 disabled:opacity-50 active:scale-95 cursor-pointer"
               >
                 <span>{isUpgrading ? 'Upgrading...' : `Confirm Semester ${targetSemester}`}</span>
                 <ArrowRight className="w-3.5 h-3.5 text-[#97f3b5]" />
@@ -128,6 +141,7 @@ export const SemesterUpgradeModal: React.FC<SemesterUpgradeModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

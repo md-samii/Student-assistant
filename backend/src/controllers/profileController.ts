@@ -86,15 +86,21 @@ export const updateProfile = async (
       bio,
       githubUrl,
       linkedinUrl,
+      skills,
     } = req.body;
 
-    if (!fullName || !university || !degree || !branch) {
+    if (!fullName) {
       res.status(400).json({
         status: 'error',
-        message: 'Full name, university, degree, and branch are required.',
+        message: 'Full name is required.',
       });
       return;
     }
+
+    const effectiveUniversity =
+      university || 'Visvesvaraya Technological University (VTU)';
+    const effectiveDegree = degree || 'B.E.';
+    const effectiveBranch = branch || 'Computer Science & Engineering';
 
     if (
       semester !== undefined &&
@@ -122,6 +128,32 @@ export const updateProfile = async (
       return;
     }
 
+    // Sync skills if provided
+    if (Array.isArray(skills)) {
+      const skillNames: string[] = Array.from(
+        new Set(
+          skills
+            .map((s: any) =>
+              typeof s === 'string' ? s.trim() : (s?.name || '').trim()
+            )
+            .filter((name: string) => name.length > 0)
+        )
+      );
+
+      await prisma.skill.deleteMany({
+        where: { userId: req.user.userId },
+      });
+
+      if (skillNames.length > 0) {
+        await prisma.skill.createMany({
+          data: skillNames.map((name) => ({
+            userId: req.user!.userId,
+            name,
+          })),
+        });
+      }
+    }
+
     const updatedUser = await prisma.user.update({
       where: {
         id: req.user.userId,
@@ -131,9 +163,9 @@ export const updateProfile = async (
         profile: {
           upsert: {
             create: {
-              university,
-              degree,
-              branch,
+              university: effectiveUniversity,
+              degree: effectiveDegree,
+              branch: effectiveBranch,
               semester: semester !== undefined ? Number(semester) : 1,
               section: section || null,
               graduationYear:
@@ -146,9 +178,9 @@ export const updateProfile = async (
               linkedinUrl: linkedinUrl || null,
             },
             update: {
-              university,
-              degree,
-              branch,
+              university: effectiveUniversity,
+              degree: effectiveDegree,
+              branch: effectiveBranch,
               ...(semester !== undefined && {
                 semester: Number(semester),
               }),
@@ -166,6 +198,7 @@ export const updateProfile = async (
       },
       include: {
         profile: true,
+        skills: true,
       },
     });
 
@@ -180,6 +213,7 @@ export const updateProfile = async (
           role: updatedUser.role,
         },
         profile: updatedUser.profile,
+        skills: updatedUser.skills || [],
       },
     });
   } catch (error) {
@@ -324,14 +358,44 @@ export const getPersonalizedSubjects = async (
     }
 
     const { branch, semester } = user.profile;
+    const querySemester = req.query.semester ? Number(req.query.semester) : undefined;
+    const effectiveSemester =
+      querySemester && Number.isInteger(querySemester) && querySemester >= 1 && querySemester <= 8
+        ? querySemester
+        : semester;
 
-    const subjects = getSubjectsForProfile(branch, semester);
+    const dbSubjects = await prisma.subject.findMany({
+      where: {
+        semester: effectiveSemester,
+      },
+      include: {
+        _count: {
+          select: { resources: true },
+        },
+      },
+      orderBy: { code: 'asc' },
+    });
+
+    const subjects =
+      dbSubjects.length > 0
+        ? dbSubjects.map((s) => ({
+            code: s.code,
+            name: s.name,
+            semester: s.semester,
+            branch: s.branch,
+            university: s.university,
+            description: s.description,
+            modulesCount: 5,
+            resourcesCount: s._count.resources,
+          }))
+        : getSubjectsForProfile(branch, effectiveSemester);
 
     res.status(200).json({
       status: 'success',
       data: {
         branch,
-        semester,
+        semester: effectiveSemester,
+        profileSemester: semester,
         subjects,
       },
     });
@@ -399,7 +463,17 @@ export const exportUserData = async (
 
       projects: user.projects,
 
-      documents: user.documents,
+      documents: user.documents.map((doc) => ({
+        id: doc.id,
+        name: doc.name,
+        type: doc.type,
+        fileUrl: doc.fileUrl,
+        storagePath: doc.storagePath,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      })),
 
       quizSubmissions: user.quizSubmissions,
 

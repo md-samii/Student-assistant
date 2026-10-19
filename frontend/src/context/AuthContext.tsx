@@ -24,6 +24,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [state, setState] = useState<AuthState>({
     user: null,
     profile: null,
+    skills: [],
     token: localStorage.getItem('token'),
     isAuthenticated: false,
     isLoading: true,
@@ -36,6 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setState({
         user: null,
         profile: null,
+        skills: [],
         token: null,
         isAuthenticated: false,
         isLoading: false,
@@ -46,11 +48,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       const response = await api.get('/auth/me');
 
-      const { user, profile } = response.data.data;
+      const { user, profile, skills } = response.data.data;
 
       setState({
         user,
         profile,
+        skills: skills || [],
         token,
         isAuthenticated: true,
         isLoading: false,

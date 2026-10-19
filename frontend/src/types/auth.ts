@@ -23,9 +23,17 @@ export interface StudentProfile {
   linkedinUrl?: string | null;
 }
 
+export interface Skill {
+  id?: string;
+  name: string;
+  category?: string | null;
+  proficiency?: string | null;
+}
+
 export interface AuthState {
   user: User | null;
   profile: StudentProfile | null;
+  skills?: Skill[];
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;

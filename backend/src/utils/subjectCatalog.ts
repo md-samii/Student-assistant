@@ -64,6 +64,7 @@ export const CSE_SUBJECT_CATALOG: SubjectCatalogItem[] = [
     course('BESCK104B', 'Introduction to Electrical Engineering', 1, 'ELECTIVE', 'ESC_I'),
     course('BESCK104C', 'Introduction to Electronics Communication', 1, 'ELECTIVE', 'ESC_I'),
     course('BESCK104D', 'Introduction to Mechanical Engineering', 1, 'ELECTIVE', 'ESC_I'),
+    course('BETCK105H', 'Introduction to Internet of Things', 1, 'ELECTIVE', 'ETC_I'),
     course('BETCK105I', 'Introduction to Cyber Security', 1, 'ELECTIVE', 'ETC_I'),
     course('BPLCK105B', 'Introduction to Python Programming', 1, 'ELECTIVE', 'PLC_I'),
 

@@ -2,13 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg-main: #f7faf7;
+  --color-bg-sidebar: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-surface: #f0f4f0;
+  --color-border: #e2e8e2;
+  --color-text-primary: #181c1b;
+  --color-text-secondary: #404942;
+  --color-text-muted: #717971;
+  --color-brand: #134e2f;
+  --color-brand-hover: #0e3b24;
+}
+
+.dark {
+  --color-bg-main: #101A16;
+  --color-bg-sidebar: #141F19;
+  --color-bg-card: #1A2821;
+  --color-bg-surface: #22332A;
+  --color-border: #304438;
+  --color-text-primary: #F0F5F1;
+  --color-text-secondary: #BAC8BE;
+  --color-text-muted: #91A397;
+  --color-brand: #86D5A4;
+  --color-brand-hover: #a2e2bb;
+  --color-btn-green: #247448;
+  --color-btn-green-hover: #2C8C57;
+  color-scheme: dark;
+}
+
 @layer base {
   body {
-    @apply bg-[#f7faf7] text-[#181c1b] min-h-screen antialiased font-sans selection:bg-[#97f3b5] selection:text-[#00361c] overflow-x-hidden;
+    @apply bg-[#f7faf7] text-[#181c1b] min-h-screen antialiased font-sans selection:bg-[#97f3b5] selection:text-[#00361c] overflow-x-hidden transition-colors duration-150;
+  }
+
+  .dark body {
+    background-color: #101A16;
+    color: #F0F5F1;
+    selection-background-color: #247448;
+    selection-color: #F0F5F1;
   }
 }
 
-/* Stitch Design System - Academic & Career Intelligence Engine */
+/* ==========================================================
+   Stitch & Donezo Design System — Light & Dark Forest Modes
+   ========================================================== */
+
+/* Stitch Cards */
 .stitch-card {
   background: #FFFFFF;
   border-radius: 1.5rem; /* 24px */
@@ -22,6 +62,18 @@
   border-color: #c0c9bf;
 }
 
+.dark .stitch-card {
+  background: #1A2821;
+  border-color: #304438;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  color: #F0F5F1;
+}
+
+.dark .stitch-card:hover {
+  border-color: #435e4e;
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.5);
+}
+
 .stitch-card-dark {
   background: #134e2f;
   border-radius: 1.5rem;
@@ -30,16 +82,53 @@
   box-shadow: 0 16px 40px -8px rgba(19, 78, 47, 0.25);
 }
 
+.dark .stitch-card-dark {
+  background: #143825;
+  border-color: #304438;
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.4);
+}
+
+/* Buttons */
 .stitch-btn-primary {
   @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-semibold shadow-sm transition-all duration-150 active:scale-[0.98];
+}
+
+.dark .stitch-btn-primary {
+  background-color: #247448;
+}
+.dark .stitch-btn-primary:hover {
+  background-color: #2C8C57;
 }
 
 .stitch-btn-secondary {
   @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-[#f0f4f0] text-[#181c1b] border border-[#c0c9bf] text-xs font-semibold shadow-sm transition-all duration-150 active:scale-[0.98];
 }
 
+.dark .stitch-btn-secondary {
+  background-color: #22332A;
+  border-color: #304438;
+  color: #F0F5F1;
+}
+.dark .stitch-btn-secondary:hover {
+  background-color: #2c4236;
+  border-color: #435e4e;
+}
+
 .stitch-input {
   @apply w-full px-4 py-2.5 rounded-full bg-white border border-[#c0c9bf] text-xs text-[#181c1b] placeholder-gray-400 focus:outline-none focus:border-[#134e2f] focus:ring-1 focus:ring-[#134e2f] transition;
+}
+
+.dark .stitch-input {
+  background-color: #141F19;
+  border-color: #304438;
+  color: #F0F5F1;
+}
+.dark .stitch-input:focus {
+  border-color: #86D5A4;
+  box-shadow: 0 0 0 1px #86D5A4;
+}
+.dark .stitch-input::placeholder {
+  color: #91A397;
 }
 
 /* Donezo High-End Clean Aesthetic */
@@ -55,6 +144,17 @@
   box-shadow: 0 10px 25px -4px rgba(19, 78, 47, 0.06);
 }
 
+.dark .donezo-card {
+  background: #1A2821;
+  border-color: #304438;
+  color: #F0F5F1;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+}
+
+.dark .donezo-card:hover {
+  border-color: #435e4e;
+}
+
 /* Featured Dark Forest Card */
 .donezo-card-dark {
   background: radial-gradient(circle at 10% 10%, #1a6444 0%, #144e35 60%, #0d3824 100%);
@@ -62,6 +162,11 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #FFFFFF;
   box-shadow: 0 12px 30px -8px rgba(20, 78, 53, 0.35);
+}
+
+.dark .donezo-card-dark {
+  background: radial-gradient(circle at 10% 10%, #1e4a33 0%, #153625 60%, #0e2419 100%);
+  border-color: #304438;
 }
 
 /* Time Tracker Patterned Background Card */
@@ -75,6 +180,11 @@
   box-shadow: 0 12px 30px -8px rgba(13, 54, 35, 0.45);
 }
 
+.dark .donezo-card-timetracker {
+  background: linear-gradient(135deg, #0b2518 0%, #103422 50%, #071910 100%);
+  border-color: #304438;
+}
+
 .donezo-card-timetracker::before {
   content: '';
   position: absolute;
@@ -85,7 +195,7 @@
   opacity: 0.6;
 }
 
-/* Diagonal Hatched Bar pattern (Matches reference chart Sunday/Thursday/Friday/Saturday bars) */
+/* Diagonal Hatched Bar pattern */
 .bar-hatched {
   background: repeating-linear-gradient(
     -45deg,
@@ -93,6 +203,16 @@
     #144E35 2.5px,
     #E5E7EB 2.5px,
     #E5E7EB 7px
+  );
+}
+
+.dark .bar-hatched {
+  background: repeating-linear-gradient(
+    -45deg,
+    #247448,
+    #247448 2.5px,
+    #22332A 2.5px,
+    #22332A 7px
   );
 }
 
@@ -106,13 +226,40 @@
   );
 }
 
+.dark .legend-hatched {
+  background: repeating-linear-gradient(
+    -45deg,
+    #247448,
+    #247448 2px,
+    #22332A 2px,
+    #22332A 5px
+  );
+}
+
 /* Donezo Pill Buttons */
 .donezo-btn-primary {
   @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#144E35] text-white text-xs font-semibold hover:bg-[#0F3D2A] transition-all duration-200 shadow-sm active:scale-[0.98];
 }
 
+.dark .donezo-btn-primary {
+  background-color: #247448;
+}
+.dark .donezo-btn-primary:hover {
+  background-color: #2C8C57;
+}
+
 .donezo-btn-outline {
   @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white text-gray-700 text-xs font-semibold border border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-sm active:scale-[0.98];
+}
+
+.dark .donezo-btn-outline {
+  background-color: #22332A;
+  border-color: #304438;
+  color: #BAC8BE;
+}
+.dark .donezo-btn-outline:hover {
+  background-color: #2a3e34;
+  color: #F0F5F1;
 }
 
 /* Material symbols font icon styling */
@@ -122,6 +269,169 @@
   'wght' 400,
   'GRAD' 0,
   'opsz' 24;
+}
+
+/* Legacy cards */
+.glass-panel,
+.eduflow-card {
+  background: #FFFFFF;
+  border-radius: 1.5rem;
+  border: 1px solid #EAEBEF;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.dark .glass-panel,
+.dark .eduflow-card {
+  background: #1A2821;
+  border-color: #304438;
+  color: #F0F5F1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.eduflow-pill {
+  border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  background: #F0FDF4;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.dark .eduflow-pill {
+  background: #22332A;
+  color: #86D5A4;
+  border-color: #304438;
+}
+
+/* ==========================================================
+   Complete Dark Forest Global Theme Overrides
+   Ensures cards, panels, inputs, borders & text across all
+   authenticated pages seamlessly adopt the Dark Forest palette
+   ========================================================== */
+
+/* Dark Mode Surfaces */
+.dark .bg-white {
+  background-color: #1A2821 !important;
+}
+
+.dark .bg-\[\#f7faf7\],
+.dark .bg-\[\#f7faf7\]\/90 {
+  background-color: #101A16 !important;
+}
+
+.dark .bg-\[\#f0f4f0\],
+.dark .bg-\[\#f4f5f7\],
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  background-color: #22332A !important;
+}
+
+.dark .bg-\[\#e8f5e9\],
+.dark .bg-\[\#e8f5e9\]\/50,
+.dark .bg-green-50,
+.dark .bg-emerald-50 {
+  background-color: #22332A !important;
+}
+
+.dark .hover\:bg-\[\#f0f4f0\]:hover,
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover,
+.dark .hover\:bg-white\/80:hover {
+  background-color: #2b3f34 !important;
+}
+
+/* Dark Mode Borders */
+.dark .border-\[\#e2e8e2\],
+.dark .border-\[\#e2e8e2\]\/60,
+.dark .border-\[\#ecefec\],
+.dark .border-\[\#c0c9bf\],
+.dark .border-\[\#a0d2af\],
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  border-color: #304438 !important;
+}
+
+/* Dark Mode Text Colors */
+.dark .text-\[\#181c1b\],
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: #F0F5F1 !important;
+}
+
+.dark .text-\[\#404942\],
+.dark .text-gray-700,
+.dark .text-gray-600 {
+  color: #BAC8BE !important;
+}
+
+.dark .text-\[\#717971\],
+.dark .text-gray-500,
+.dark .text-gray-400 {
+  color: #91A397 !important;
+}
+
+.dark .text-\[\#00361c\],
+.dark .text-\[\#134e2f\],
+.dark .text-\[\#006d3d\],
+.dark .text-\[\#1b5e20\],
+.dark .text-green-700,
+.dark .text-emerald-700 {
+  color: #86D5A4 !important;
+}
+
+/* Dark Mode Buttons */
+.dark .bg-\[\#134e2f\],
+.dark .bg-\[\#144e35\],
+.dark .bg-\[\#006d3d\],
+.dark .bg-\[\#1b5e20\] {
+  background-color: #247448 !important;
+  color: #FFFFFF !important;
+}
+
+.dark .hover\:bg-\[\#0e3b24\]:hover,
+.dark .hover\:bg-\[\#0f3d2a\]:hover,
+.dark .hover\:bg-\[\#005730\]:hover {
+  background-color: #2C8C57 !important;
+}
+
+/* Form Controls in Dark Mode */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.dark select {
+  background-color: #141F19 !important;
+  border-color: #304438 !important;
+  color: #F0F5F1 !important;
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: #86D5A4 !important;
+  box-shadow: 0 0 0 1px #86D5A4 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #91A397 !important;
+}
+
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  accent-color: #86D5A4;
+}
+
+/* Sidebar and Header explicit styles */
+.dark aside {
+  background-color: #141F19 !important;
+  border-color: #304438 !important;
+}
+
+.dark header {
+  background-color: rgba(16, 26, 22, 0.95) !important;
+  border-color: #304438 !important;
 }
 
 /* Smooth Minimal Scrollbars */
@@ -143,34 +453,94 @@
   background: #94A3B8;
 }
 
-/* Legacy fallback card support if referenced */
-.glass-panel {
-  background: #FFFFFF;
-  border-radius: 1.5rem;
-  border: 1px solid #EAEBEF;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+.dark ::-webkit-scrollbar-track {
+  background: #141F19;
 }
 
-.eduflow-card {
-  background: #FFFFFF;
-  border-radius: 1.5rem;
-  border: 1px solid #EAEBEF;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  transition: all 0.25s ease;
-}
-
-.eduflow-card:hover {
-  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.06);
-  border-color: #D1D5DB;
-}
-
-.eduflow-pill {
+.dark ::-webkit-scrollbar-thumb {
+  background: #304438;
   border-radius: 9999px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  background: #F0FDF4;
-  color: #166534;
-  border: 1px solid #BBF7D0;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #435e4e;
+}
+
+/* ==========================================================
+   Academic Background Animations & Mouse Parallax
+   ========================================================== */
+
+@keyframes academicFloatSlow {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translate3d(8px, -14px, 0) rotate(2.5deg) scale(1.02);
+  }
+  50% {
+    transform: translate3d(-10px, -22px, 0) rotate(-3deg) scale(0.98);
+  }
+  75% {
+    transform: translate3d(-16px, -10px, 0) rotate(2deg) scale(1.01);
+  }
+}
+
+@keyframes academicFloatMedium {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(-12px, -18px, 0) rotate(-4deg);
+  }
+  66% {
+    transform: translate3d(14px, -10px, 0) rotate(3.5deg);
+  }
+}
+
+@keyframes academicFloatGentle {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(10px, -16px, 0) scale(1.04);
+  }
+}
+
+@keyframes academicPulseGlow {
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.32;
+    transform: scale(1.08);
+  }
+}
+
+.academic-doodle-float-1 {
+  animation: academicFloatSlow 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+.academic-doodle-float-2 {
+  animation: academicFloatMedium 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+.academic-doodle-float-3 {
+  animation: academicFloatGentle 15s ease-in-out infinite;
+  will-change: transform;
+}
+
+.academic-ambient-glow {
+  animation: academicPulseGlow 12s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .academic-doodle-float-1,
+  .academic-doodle-float-2,
+  .academic-doodle-float-3,
+  .academic-ambient-glow {
+    animation: none !important;
+  }
 }

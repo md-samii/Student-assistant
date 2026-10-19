@@ -1,601 +1,867 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { 
-  Briefcase, 
-  Building2, 
-  MapPin, 
-  Calendar, 
-  CheckCircle2, 
-  Plus, 
-  Github, 
-  Globe, 
-  Sparkles, 
-  Search, 
-  X, 
-  Landmark, 
-  Code2,
-  Send,
-  TrendingUp,
-  Award,
+import {
+  Briefcase,
+  Building2,
+  MapPin,
+  Calendar,
+  ExternalLink,
+  Search,
+  X,
+  Compass,
+  Laptop,
+  RefreshCw,
   Clock,
-  ArrowUpRight,
-  Bookmark
 } from 'lucide-react';
+
+type CategoryTab = 'ALL' | 'JOB' | 'INTERNSHIP';
+
+interface Opportunity {
+  id: string | number;
+  title: string;
+  company?: string | null;
+  provider?: string | null;
+  location?: string | null;
+  isRemote?: boolean | null;
+  employmentType?: string | null;
+  experienceLevel?: string | null;
+  salaryRange?: string | null;
+  description?: string | null;
+  requiredSkills?: string[] | null;
+  logoUrl?: string | null;
+  postedAt?: string | null;
+  applyUrl?: string | null;
+}
+
+const PRESET_ROLES = [
+  'All Roles',
+  'Software Engineer',
+  'Frontend Developer',
+  'Backend Developer',
+  'Full Stack Developer',
+  'Java Developer',
+  'Python Developer',
+  'Data Analyst',
+  'Data Scientist',
+  'AI/ML Engineer',
+  'Cybersecurity Analyst',
+  'Cloud Engineer',
+  'DevOps Engineer',
+  'QA Engineer',
+  'Intern',
+  'Other',
+];
+
+const EXPERIENCE_LEVELS = [
+  { label: 'All Experience Levels', value: 'ALL' },
+  { label: 'Internship', value: 'INTERNSHIP' },
+  { label: 'Fresher / Entry Level', value: 'FRESHER' },
+  { label: 'Associate', value: 'ASSOCIATE' },
+  { label: 'Mid-Level', value: 'MID' },
+  { label: 'Senior', value: 'SENIOR' },
+];
+
+const EMPLOYMENT_TYPES = [
+  { label: 'All Employment Types', value: 'ALL' },
+  { label: 'Full-time', value: 'FULL_TIME' },
+  { label: 'Part-time', value: 'PART_TIME' },
+  { label: 'Internship', value: 'INTERNSHIP' },
+  { label: 'Contract', value: 'CONTRACT' },
+];
+
+const SOURCE_PROVIDERS = [
+  { label: 'All Sources', value: 'ALL' },
+  { label: 'Adzuna India', value: 'ADZUNA' },
+  { label: 'RemoteOK', value: 'REMOTE_OK' },
+  { label: 'VTU Campus Placement', value: 'VTU_CAMPUS_FEED' },
+];
+
+const inputClass =
+  'w-full rounded-full border border-[#c0c9bf] bg-[#f7faf7] px-4 py-2.5 text-sm text-[#181c1b] outline-none transition placeholder:text-[#717971] focus:border-[#134e2f] focus:bg-white';
+
+const selectClass =
+  'rounded-full border border-[#c0c9bf] bg-[#f7faf7] px-3 py-2 text-xs font-medium text-[#181c1b] outline-none focus:border-[#134e2f]';
+
+function validateExternalUrl(value?: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function getSourceBadgeInfo(provider?: string | null) {
+  const source = (provider || '').toUpperCase();
+
+  if (source.includes('ADZUNA')) {
+    return {
+      label: 'Adzuna India',
+      classes: 'bg-[#e8f5e9] text-[#1b5e20] border-[#a0d2af]',
+    };
+  }
+
+  if (source.includes('REMOTE')) {
+    return {
+      label: 'RemoteOK',
+      classes: 'bg-[#f3e8ff] text-[#6b21a8] border-[#d8b4fe]',
+    };
+  }
+
+  if (source.includes('CAMPUS') || source.includes('VTU')) {
+    return {
+      label: 'VTU Campus Placement',
+      classes: 'bg-[#e0f2fe] text-[#0369a1] border-[#bae6fd]',
+    };
+  }
+
+  return {
+    label: provider || 'Job Provider',
+    classes: 'bg-[#f4f6f4] text-[#404942] border-[#dce2dc]',
+  };
+}
+
+function formatEmploymentType(value?: string | null) {
+  if (!value) return null;
+
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 export default function CareersAndOpportunities() {
   const { profile } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'INTERNSHIP' | 'JOB' | 'GOVT_EXAM' | 'PROJECTS'>('INTERNSHIP');
-  const [opportunities, setOpportunities] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
+  // Search preferences
+  const [selectedRole, setSelectedRole] = useState('All Roles');
+  const [customRole, setCustomRole] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationInput, setLocationInput] = useState('');
+  const [workMode, setWorkMode] = useState('ALL');
+  const [experienceLevel, setExperienceLevel] = useState('ALL');
+  const [employmentType, setEmploymentType] = useState('ALL');
+  const [sourceFilter, setSourceFilter] = useState('ALL');
+  const [activeCategoryTab, setActiveCategoryTab] =
+    useState<CategoryTab>('ALL');
+
+  // Results and request state
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [dataFreshness, setDataFreshness] = useState<unknown>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  // Apply Modal State
-  const [applyingOpp, setApplyingOpp] = useState<any | null>(null);
-  const [isSubmittingApp, setIsSubmittingApp] = useState(false);
-  const [appSuccessMsg, setAppSuccessMsg] = useState('');
+  const fetchOpportunities = useCallback(
+    async (overrides?: {
+      category?: CategoryTab;
+      clearFilters?: boolean;
+    }) => {
+      const category = overrides?.category ?? activeCategoryTab;
+      const clearFilters = overrides?.clearFilters ?? false;
 
-  // Add Project Modal State
-  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
-  const [projTitle, setProjTitle] = useState('');
-  const [projDesc, setProjDesc] = useState('');
-  const [projTech, setProjTech] = useState('');
-  const [projGithub, setProjGithub] = useState('');
-  const [projDemo, setProjDemo] = useState('');
-  const [isSavingProj, setIsSavingProj] = useState(false);
+      const effectiveRole = clearFilters
+        ? ''
+        : customRole.trim() ||
+        (selectedRole !== 'All Roles' && selectedRole !== 'Other'
+          ? selectedRole
+          : '');
 
+      const keyword = clearFilters ? '' : searchQuery.trim();
+      const location = clearFilters ? '' : locationInput.trim();
+      const mode = clearFilters ? 'ALL' : workMode;
+      const level = clearFilters ? 'ALL' : experienceLevel;
+      const type = clearFilters ? 'ALL' : employmentType;
+      const source = clearFilters ? 'ALL' : sourceFilter;
+
+      const params: Record<string, string> = {};
+
+      if (category !== 'ALL') {
+        params.category = category;
+      }
+
+      if (effectiveRole) {
+        params.role = effectiveRole;
+      }
+
+      if (keyword) {
+        params.search = keyword;
+      }
+
+      if (location) {
+        params.location = location;
+      }
+
+      if (mode === 'REMOTE') {
+        params.isRemote = 'true';
+      } else if (mode === 'ONSITE') {
+        params.isRemote = 'false';
+      }
+
+      if (level !== 'ALL') {
+        params.experienceLevel = level;
+      }
+
+      if (type !== 'ALL') {
+        params.employmentType = type;
+      }
+
+      if (source !== 'ALL') {
+        params.source = source;
+      }
+
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+
+        const response = await api.get('/careers/opportunities', {
+          params,
+        });
+
+        const data = response.data?.data;
+        const fetched = data?.opportunities;
+
+        setOpportunities(Array.isArray(fetched) ? fetched : []);
+        setDataFreshness(data?.dataFreshness ?? null);
+        setHasSearched(true);
+      } catch (error) {
+        console.error('Failed to fetch career opportunities:', error);
+        setErrorMessage(
+          'We could not load job listings. Check that the backend and database are running, then try again.',
+        );
+        setOpportunities([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      activeCategoryTab,
+      customRole,
+      selectedRole,
+      searchQuery,
+      locationInput,
+      workMode,
+      experienceLevel,
+      employmentType,
+      sourceFilter,
+    ],
+  );
+
+  // Load opportunities when the page opens.
   useEffect(() => {
-    if (activeTab === 'PROJECTS') {
-      fetchProjects();
-    } else {
-      fetchOpportunities();
-    }
-  }, [activeTab, searchQuery]);
+    void fetchOpportunities({ category: 'ALL' });
+  }, []);
 
-  const fetchOpportunities = async () => {
-    try {
-      setIsLoading(true);
-      const params: any = {};
-      if (activeTab) params.category = activeTab;
-      if (searchQuery) params.search = searchQuery;
-
-      const res = await api.get('/careers/opportunities', { params });
-      setOpportunities(res.data.data.opportunities || []);
-    } catch (err) {
-      console.warn('Failed to fetch career opportunities:', err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void fetchOpportunities();
   };
 
-  const fetchProjects = async () => {
-    try {
-      setIsLoading(true);
-      const res = await api.get('/careers/projects');
-      setProjects(res.data.data.projects || []);
-    } catch (err) {
-      console.warn('Failed to fetch student projects:', err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleCategoryChange = (category: CategoryTab) => {
+    setActiveCategoryTab(category);
+    void fetchOpportunities({ category });
   };
 
-  const handleApplyClick = async (opp: any) => {
-    setApplyingOpp(opp);
-    setAppSuccessMsg('');
+  const handleClearFilters = () => {
+    setSelectedRole('All Roles');
+    setCustomRole('');
+    setSearchQuery('');
+    setLocationInput('');
+    setWorkMode('ALL');
+    setExperienceLevel('ALL');
+    setEmploymentType('ALL');
+    setSourceFilter('ALL');
+    setActiveCategoryTab('ALL');
+
+    void fetchOpportunities({
+      category: 'ALL',
+      clearFilters: true,
+    });
   };
 
-  const handleConfirmApply = async () => {
-    if (!applyingOpp) return;
+  const handleManualSync = async () => {
     try {
-      setIsSubmittingApp(true);
-      const res = await api.post(`/careers/apply/${applyingOpp.id}`);
-      setAppSuccessMsg(res.data.message || 'Application submitted successfully!');
-      
-      setOpportunities((prev) =>
-        prev.map((o) => (o.id === applyingOpp.id ? { ...o, hasApplied: true } : o))
+      setIsSyncing(true);
+      setErrorMessage('');
+
+      await api.post('/careers/sync');
+      await fetchOpportunities();
+    } catch (error) {
+      console.error('Opportunity sync error:', error);
+      setErrorMessage(
+        'Unable to synchronize listings right now. Existing results have not been submitted as applications.',
       );
-    } catch (err) {
-      console.error('Apply error:', err);
     } finally {
-      setIsSubmittingApp(false);
+      setIsSyncing(false);
     }
   };
 
-  const handleAddProjectSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!projTitle.trim() || !projGithub.trim()) return;
+  const buildLinkedInJobsUrl = () => {
+    const role =
+      customRole.trim() ||
+      (selectedRole !== 'All Roles' && selectedRole !== 'Other'
+        ? selectedRole
+        : searchQuery.trim());
 
-    try {
-      setIsSavingProj(true);
-      await api.post('/careers/projects', {
-        title: projTitle,
-        description: projDesc,
-        techStack: projTech.split(',').map((s) => s.trim()),
-        githubUrl: projGithub,
-        liveDemoUrl: projDemo,
-      });
+    const params = new URLSearchParams();
 
-      setShowAddProjectModal(false);
-      setProjTitle('');
-      setProjDesc('');
-      setProjTech('');
-      setProjGithub('');
-      setProjDemo('');
-      await fetchProjects();
-    } catch (err) {
-      console.error('Add project error:', err);
-    } finally {
-      setIsSavingProj(false);
+    if (role) params.set('keywords', role);
+    if (locationInput.trim()) {
+      params.set('location', locationInput.trim());
     }
+
+    if (workMode === 'REMOTE') params.set('f_WT', '2');
+    if (workMode === 'ONSITE') params.set('f_WT', '1');
+
+    if (experienceLevel === 'INTERNSHIP') params.set('f_E', '1');
+    if (experienceLevel === 'FRESHER') params.set('f_E', '2');
+    if (experienceLevel === 'ASSOCIATE') params.set('f_E', '3');
+    if (experienceLevel === 'MID') params.set('f_E', '4');
+    if (experienceLevel === 'SENIOR') params.set('f_E', '5');
+
+    if (employmentType === 'FULL_TIME') params.set('f_JT', 'F');
+    if (employmentType === 'PART_TIME') params.set('f_JT', 'P');
+    if (employmentType === 'CONTRACT') params.set('f_JT', 'C');
+    if (employmentType === 'INTERNSHIP') params.set('f_JT', 'I');
+
+    const query = params.toString();
+
+    return `https://www.linkedin.com/jobs/search/${query ? `?${query}` : ''}`;
   };
+
+  const hasActiveFilters =
+    selectedRole !== 'All Roles' ||
+    Boolean(customRole.trim()) ||
+    Boolean(searchQuery.trim()) ||
+    Boolean(locationInput.trim()) ||
+    workMode !== 'ALL' ||
+    experienceLevel !== 'ALL' ||
+    employmentType !== 'ALL' ||
+    sourceFilter !== 'ALL' ||
+    activeCategoryTab !== 'ALL';
+
+  const activeRoleLabel =
+    customRole.trim() ||
+    (selectedRole !== 'All Roles' ? selectedRole : searchQuery.trim()) ||
+    'all roles';
+
+  const validOpportunityCount = opportunities.length;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-fade-in pb-12 font-sans">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="mx-auto max-w-7xl animate-fade-in space-y-7 pb-20 font-sans text-[#181c1b]">
+      {/* Page heading */}
+      <header className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Career &amp; Placement Engine • {profile?.branch || 'Engineering'}
-          </div>
-          <h1 className="text-3xl font-extrabold text-[#181c1b] tracking-tight">
+
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#181c1b]">
             Careers &amp; Opportunities
           </h1>
-          <p className="text-[#404942] text-sm mt-1 max-w-3xl">
-            AI-matched internships, full-time roles, competitive exam roadmaps, and verified student project showcases.
+
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-[#404942]">
+            Search jobs and internships from our available providers. Review
+            each original listing and apply directly on the employer's or job
+            portal's website.
           </p>
         </div>
 
-        {activeTab === 'PROJECTS' && (
-          <button
-            onClick={() => setShowAddProjectModal(true)}
-            className="px-5 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white font-bold text-xs transition shadow-sm flex items-center gap-2 shrink-0 active:scale-95"
-          >
-            <Plus className="w-4 h-4 text-[#97f3b5]" />
-            <span>+ Add GitHub Project</span>
-          </button>
-        )}
-      </div>
+        <button
+          type="button"
+          onClick={handleManualSync}
+          disabled={isSyncing || isLoading}
+          className="stitch-btn-secondary shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
+          title="Refresh listings from configured providers"
+        >
+          <RefreshCw
+            className={`h-3.5 w-3.5 text-[#006d3d] ${isSyncing ? 'animate-spin' : ''
+              }`}
+          />
+          <span>{isSyncing ? 'Syncing...' : 'Sync Opportunities'}</span>
+        </button>
+      </header>
 
-      {/* 4 Metric Bento Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* Card 1: Primary Dark Card */}
-        <div className="p-6 rounded-3xl bg-[#134e2f] text-white flex flex-col justify-between relative overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white/80">Active Applications</span>
-            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4 text-white" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-3xl font-extrabold text-white">12</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[#97f3b5] text-xs font-medium">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>+3 updates this week</span>
-          </div>
-          <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#006d3d]/30 rounded-full blur-xl pointer-events-none"></div>
+      {/* Main job-search panel */}
+      <section className="stitch-card space-y-5 bg-white p-5 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#181c1b]">
+            <Briefcase className="h-4 w-4 text-[#006d3d]" />
+            Find Your Next Opportunity
+          </label>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#b3261e] hover:underline"
+            >
+              <X className="h-3 w-3" />
+              Clear Filters
+            </button>
+          )}
         </div>
 
-        {/* Card 2: AI Match Rate */}
-        <div className="p-6 rounded-3xl bg-white border border-[#e2e8e2] flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#404942]">AI Match Rate</span>
-            <div className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4 text-[#181c1b]" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-3xl font-extrabold text-[#181c1b]">94%</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[#006d3d] text-xs font-medium">
-            <Award className="w-3.5 h-3.5" />
-            <span>Based on CS coursework</span>
-          </div>
-        </div>
+        {/* Role choices */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-[#717971]">
+            Select a job role or enter your own
+          </p>
 
-        {/* Card 3: Interview Invites */}
-        <div className="p-6 rounded-3xl bg-white border border-[#e2e8e2] flex flex-col justify-between shadow-sm hover:border-[#006d3d] transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#404942]">Interview Invites</span>
-            <div className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4 text-[#181c1b]" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-3xl font-extrabold text-[#181c1b]">3</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[#006d3d] text-xs font-medium">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Upcoming: Google &amp; Stripe</span>
-          </div>
-        </div>
+          <div className="flex flex-wrap gap-2">
+            {PRESET_ROLES.map((role) => {
+              const isSelected = selectedRole === role;
 
-        {/* Card 4: Expiring Deadlines */}
-        <div className="p-6 rounded-3xl bg-white border border-[#e2e8e2] flex flex-col justify-between shadow-sm hover:border-[#ba1a1a] transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#404942]">Expiring Deadlines</span>
-            <div className="w-8 h-8 rounded-full bg-[#ecefec] flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4 text-[#181c1b]" />
-            </div>
-          </div>
-          <div className="my-3">
-            <span className="text-3xl font-extrabold text-[#ba1a1a]">5</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[#ba1a1a] text-xs font-medium">
-            <Clock className="w-3.5 h-3.5" />
-            <span>Next 48 hours</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs & Search Controls */}
-      <div className="bg-white border border-[#e2e8e2] p-4 rounded-3xl space-y-4 shadow-sm">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {[
-              { key: 'INTERNSHIP', label: 'Internships (Summer 2025)', icon: Briefcase },
-              { key: 'JOB', label: 'Full-Time Roles', icon: Building2 },
-              { key: 'GOVT_EXAM', label: 'Government & GATE', icon: Landmark },
-              { key: 'PROJECTS', label: 'Portfolio Showcase', icon: Code2 },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.key;
               return (
                 <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={`px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
-                    isActive
-                      ? 'bg-[#134e2f] text-white shadow-sm'
-                      : 'bg-[#f7faf7] text-[#404942] hover:text-[#181c1b] hover:bg-[#ecefec] border border-[#e2e8e2]'
-                  }`}
+                  key={role}
+                  type="button"
+                  onClick={() => {
+                    setSelectedRole(role);
+
+                    if (role !== 'Other') {
+                      setCustomRole('');
+                    }
+                  }}
+                  aria-pressed={isSelected}
+                  className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${isSelected
+                    ? 'border-[#134e2f] bg-[#134e2f] text-white shadow-sm'
+                    : 'border-[#dce2dc] bg-[#f0f4f0] text-[#181c1b] hover:border-[#a0b6a2] hover:bg-[#e8f5e9]'
+                    }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#97f3b5]' : 'text-[#717971]'}`} />
-                  <span>{tab.label}</span>
+                  {role}
                 </button>
               );
             })}
           </div>
 
-          {activeTab !== 'PROJECTS' && (
-            <div className="relative min-w-[280px]">
-              <Search className="w-4 h-4 text-[#717971] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search company, skills, roles..."
-                className="w-full pl-10 pr-4 py-2 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] placeholder-[#717971] outline-none focus:border-[#134e2f] focus:bg-white transition"
-              />
-            </div>
+          {selectedRole === 'Other' && (
+            <input
+              type="text"
+              value={customRole}
+              onChange={(event) => setCustomRole(event.target.value)}
+              placeholder="Enter a job title, e.g. Embedded Systems Engineer"
+              className={inputClass}
+              aria-label="Custom job role"
+            />
           )}
         </div>
+
+        {/* Search form */}
+        <form onSubmit={handleSearchSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+            <div className="relative lg:col-span-5">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#717971]" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Keywords, skills, or company"
+                className={`${inputClass} pl-11`}
+                aria-label="Search keywords, skills, or company"
+              />
+            </div>
+
+            <div className="relative lg:col-span-3">
+              <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#717971]" />
+              <input
+                type="text"
+                value={locationInput}
+                onChange={(event) => setLocationInput(event.target.value)}
+                placeholder="City, state, or country"
+                className={`${inputClass} pl-11`}
+                aria-label="Preferred job location"
+              />
+            </div>
+
+            <div className="lg:col-span-4">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="stitch-btn-primary flex w-full items-center justify-center gap-2 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Search className="h-4 w-4" />
+                {isLoading ? 'Searching...' : 'Search Jobs'}
+              </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3 border-t border-[#e2e8e2] pt-4">
+            <label className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-[#717971]">Work mode</span>
+              <select
+                value={workMode}
+                onChange={(event) => setWorkMode(event.target.value)}
+                className={selectClass}
+              >
+                <option value="ALL">All modes</option>
+                <option value="REMOTE">Remote</option>
+                <option value="ONSITE">On-site</option>
+              </select>
+            </label>
+
+            <label className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-[#717971]">Experience</span>
+              <select
+                value={experienceLevel}
+                onChange={(event) => setExperienceLevel(event.target.value)}
+                className={selectClass}
+              >
+                {EXPERIENCE_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-[#717971]">Employment</span>
+              <select
+                value={employmentType}
+                onChange={(event) => setEmploymentType(event.target.value)}
+                className={selectClass}
+              >
+                {EMPLOYMENT_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-[#717971]">Source</span>
+              <select
+                value={sourceFilter}
+                onChange={(event) => setSourceFilter(event.target.value)}
+                className={selectClass}
+              >
+                {SOURCE_PROVIDERS.map((source) => (
+                  <option key={source.value} value={source.value}>
+                    {source.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <a
+              href={buildLinkedInJobsUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto inline-flex items-center justify-center gap-2 rounded-full bg-[#0a66c2] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#004182]"
+              title="Search LinkedIn Jobs using your selected preferences"
+            >
+              <svg
+                className="h-3.5 w-3.5 fill-current"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+              </svg>
+              Search on LinkedIn
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+
+          <p className="text-xs leading-relaxed text-[#717971]">
+            LinkedIn search opens LinkedIn in a new tab. LinkedIn job cards
+            appear here only if an authorized listing integration is available.
+          </p>
+        </form>
+      </section>
+
+      {/* Only job-related categories remain */}
+      <nav
+        className="flex items-center gap-2 overflow-x-auto border-b border-[#dce2dc] pb-3"
+        aria-label="Job categories"
+      >
+        {(
+          [
+            { id: 'ALL', label: 'All Opportunities', icon: Briefcase },
+            { id: 'JOB', label: 'Full-Time Jobs', icon: Building2 },
+            { id: 'INTERNSHIP', label: 'Internships', icon: Clock },
+          ] as const
+        ).map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeCategoryTab === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleCategoryChange(tab.id)}
+              aria-pressed={isActive}
+              className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition ${isActive
+                ? 'border-[#134e2f] bg-[#134e2f] text-white shadow-sm'
+                : 'border-[#e2e8e2] bg-white text-[#404942] hover:bg-[#ecefec] hover:text-[#181c1b]'
+                }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Results heading */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-[#181c1b]">
+            {activeCategoryTab === 'INTERNSHIP'
+              ? 'Internship Opportunities'
+              : activeCategoryTab === 'JOB'
+                ? 'Full-Time Job Opportunities'
+                : 'Available Jobs & Internships'}
+          </h2>
+          <p className="mt-1 text-xs text-[#717971]">
+            {hasSearched
+              ? `${validOpportunityCount} listing${validOpportunityCount === 1 ? '' : 's'} returned by the current search`
+              : 'Search available listings from the integrated providers'}
+          </p>
+        </div>
+
+        {dataFreshness != null && (
+          <span className="text-xs text-[#717971]">
+            Provider freshness information available
+          </span>
+        )}
       </div>
 
-      {/* Opportunities or Projects Rendering */}
-      {activeTab !== 'PROJECTS' ? (
-        isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-52 rounded-3xl bg-white border border-[#e2e8e2] animate-pulse"></div>
-            ))}
+      {/* Error state */}
+      {errorMessage && (
+        <div
+          role="alert"
+          className="rounded-2xl border border-[#f0c6c2] bg-[#fff5f4] p-4 text-sm text-[#8c2720]"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <p>{errorMessage}</p>
+            <button
+              type="button"
+              onClick={() => void fetchOpportunities()}
+              className="shrink-0 font-semibold underline"
+            >
+              Retry
+            </button>
           </div>
-        ) : opportunities.length === 0 ? (
-          <div className="bg-white border border-[#e2e8e2] rounded-3xl p-12 text-center space-y-3 shadow-sm">
-            <Briefcase className="w-10 h-10 text-[#717971] mx-auto opacity-50" />
-            <h3 className="font-bold text-[#181c1b] text-base">No Opportunities Found</h3>
-            <p className="text-xs text-[#404942]">Try adjusting your search query or tab selection above.</p>
+        </div>
+      )}
+
+      {/* Job results */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <div
+              key={item}
+              className="h-64 animate-pulse rounded-3xl border border-[#e2e8e2] bg-white"
+            />
+          ))}
+        </div>
+      ) : !errorMessage && opportunities.length === 0 ? (
+        <div className="stitch-card space-y-4 bg-white p-8 text-center md:p-12">
+          <Briefcase className="mx-auto h-12 w-12 text-[#c0c9bf]" />
+          <h3 className="text-base font-bold text-[#181c1b]">
+            No Matching Jobs Found
+          </h3>
+          <p className="mx-auto max-w-lg text-sm leading-relaxed text-[#404942]">
+            No available listings matched {activeRoleLabel}. Try a different
+            role, location, or filter. You can also search LinkedIn directly
+            using the preferences above.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="stitch-btn-secondary px-4 py-2 text-xs"
+            >
+              Clear Filters
+            </button>
+
+            <a
+              href={buildLinkedInJobsUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-[#0a66c2] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#004182]"
+            >
+              Search on LinkedIn
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {opportunities.map((opp) => (
-              <div
-                key={opp.id}
-                className="bg-white border border-[#e2e8e2] rounded-3xl p-6 shadow-sm hover:border-[#006d3d] hover:shadow-md transition-all flex flex-col justify-between space-y-5 group"
+        </div>
+      ) : !errorMessage ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {opportunities.map((opportunity) => {
+            const sourceBadge = getSourceBadgeInfo(opportunity.provider);
+            const safeUrl = validateExternalUrl(opportunity.applyUrl);
+            const postedDate = formatDate(opportunity.postedAt);
+            const companyName = opportunity.company?.trim() || 'Company not specified';
+            const skills = Array.isArray(opportunity.requiredSkills)
+              ? opportunity.requiredSkills.filter(
+                (skill): skill is string =>
+                  typeof skill === 'string' && skill.trim().length > 0,
+              )
+              : [];
+
+            return (
+              <article
+                key={opportunity.id}
+                className="stitch-card group flex flex-col justify-between space-y-4 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(19,78,47,0.08)] md:p-6"
               >
                 <div className="space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#ecefec] text-[#134e2f] border border-[#c0c9bf]/40 flex items-center justify-center font-bold text-lg shrink-0">
-                        {opp.company ? opp.company[0] : 'O'}
+                  {/* Job title and source */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#c0c9bf]/40 bg-[#ecefec] text-base font-bold text-[#134e2f]">
+                        {validateExternalUrl(opportunity.logoUrl) ? (
+                          <img
+                            src={validateExternalUrl(opportunity.logoUrl)!}
+                            alt={`${companyName} logo`}
+                            className="h-6 w-6 object-contain"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          companyName.charAt(0).toUpperCase()
+                        )}
                       </div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-bold text-base text-[#181c1b] group-hover:text-[#134e2f] transition">
-                            {opp.title}
-                          </h3>
-                          <span className="px-2.5 py-0.5 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-[11px] font-bold flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-[#006d3d]" /> 95% Match
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#404942] font-medium mt-0.5">{opp.company}</p>
+
+                      <div className="min-w-0">
+                        <h3 className="line-clamp-2 text-base font-bold leading-snug text-[#181c1b] transition group-hover:text-[#134e2f]">
+                          {opportunity.title}
+                        </h3>
+                        <p className="mt-1 flex items-center gap-1 text-xs font-medium text-[#404942]">
+                          <Building2 className="h-3 w-3 shrink-0 text-[#717971]" />
+                          <span className="line-clamp-1">{companyName}</span>
+                        </p>
                       </div>
                     </div>
 
-                    <span className="px-3 py-1 rounded-full bg-[#f7faf7] border border-[#e2e8e2] text-[#134e2f] font-bold text-xs whitespace-nowrap">
-                      {opp.stipendOrSalary}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-[#404942] line-clamp-2 leading-relaxed">
-                    {opp.description}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-[#717971]">
-                    <span className="flex items-center gap-1 text-[11px]">
-                      <MapPin className="w-3.5 h-3.5 text-[#006d3d]" /> {opp.location}
-                    </span>
-                    <span className="flex items-center gap-1 text-[11px] text-[#ba1a1a]">
-                      <Calendar className="w-3.5 h-3.5" /> Deadline: {opp.deadline}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    {opp.requiredSkills.map((sk: string) => (
-                      <span key={sk} className="px-2.5 py-0.5 rounded-full bg-[#ecefec] text-[#404942] text-[11px] font-medium">
-                        {sk}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[#ecefec] flex items-center justify-between text-xs">
-                  <span className="text-[11px] text-[#717971]">Matched to {profile?.branch?.split(' ')[0] || 'Engineering'}</span>
-
-                  {opp.hasApplied ? (
-                    <span className="px-3.5 py-1.5 rounded-full bg-[#e8f5e9] border border-[#a0d2af] text-[#1b5e20] font-bold text-xs flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-[#006d3d]" /> Application Submitted
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleApplyClick(opp)}
-                      className="px-5 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white font-bold text-xs transition shadow-sm flex items-center gap-1.5 active:scale-95"
+                    <span
+                      className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold ${sourceBadge.classes}`}
                     >
-                      <Send className="w-3.5 h-3.5 text-[#97f3b5]" />
-                      <span>Quick Apply with Locker</span>
-                    </button>
+                      {sourceBadge.label}
+                    </span>
+                  </div>
+
+                  {/* Location and work metadata */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {opportunity.location && (
+                      <span className="flex items-center gap-1 text-[#717971]">
+                        <MapPin className="h-3.5 w-3.5 text-[#006d3d]" />
+                        {opportunity.location}
+                      </span>
+                    )}
+
+                    {opportunity.isRemote === true && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f5e9] px-2 py-1 text-[10px] font-bold text-[#1b5e20]">
+                        <Laptop className="h-3 w-3" />
+                        Remote
+                      </span>
+                    )}
+
+                    {opportunity.employmentType && (
+                      <span className="rounded-full border border-[#e2e8e2] bg-[#f4f6f4] px-2 py-1 text-[10px] font-medium text-[#404942]">
+                        {formatEmploymentType(opportunity.employmentType)}
+                      </span>
+                    )}
+
+                    {opportunity.experienceLevel && (
+                      <span className="rounded-full border border-[#e2e8e2] bg-white px-2 py-1 text-[10px] font-medium text-[#404942]">
+                        {formatEmploymentType(opportunity.experienceLevel)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Salary appears only when the source supplied it */}
+                  {opportunity.salaryRange && (
+                    <div className="inline-flex rounded-full border border-[#e2e8e2] bg-[#f7faf7] px-3 py-1 text-xs font-bold text-[#134e2f]">
+                      {opportunity.salaryRange}
+                    </div>
+                  )}
+
+                  {opportunity.description && (
+                    <p className="line-clamp-3 text-xs leading-relaxed text-[#404942]">
+                      {opportunity.description}
+                    </p>
+                  )}
+
+                  {skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {skills.slice(0, 5).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full border border-[#e2e8e2] bg-[#f0f4f0] px-2.5 py-1 text-[10px] font-medium text-[#404942]"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+
+                      {skills.length > 5 && (
+                        <span className="px-1 py-1 text-[10px] text-[#717971]">
+                          +{skills.length - 5} more
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )
-      ) : (
-        /* Portfolio Showcase Grid */
-        isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-44 rounded-3xl bg-white border border-[#e2e8e2] animate-pulse"></div>
-            ))}
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="bg-white border border-[#e2e8e2] rounded-3xl p-12 text-center space-y-3 shadow-sm">
-            <Code2 className="w-10 h-10 text-[#717971] mx-auto opacity-50" />
-            <h3 className="font-bold text-[#181c1b] text-base">No Portfolio Projects Showcase</h3>
-            <p className="text-xs text-[#404942]">Click "+ Add GitHub Project" above to highlight your technical builds.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {projects.map((proj) => (
-              <div
-                key={proj.id}
-                className="bg-white border border-[#e2e8e2] rounded-3xl p-6 shadow-sm hover:border-[#006d3d] hover:shadow-md transition-all flex flex-col justify-between space-y-4 group"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold">
-                      Live Portfolio Repo
-                    </span>
-                    <span className="text-[11px] text-[#717971]">
-                      {new Date(proj.createdAt).toLocaleDateString()}
+
+                {/* External listing action */}
+                <footer className="flex items-center justify-between gap-3 border-t border-[#ecefec] pt-4">
+                  <div className="flex min-w-0 items-center gap-1 text-[11px] text-[#717971]">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      {postedDate || 'Posting date unavailable'}
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-lg text-[#181c1b] group-hover:text-[#134e2f] transition">
-                    {proj.title}
-                  </h3>
-
-                  <p className="text-xs text-[#404942] leading-relaxed line-clamp-2">
-                    {proj.description}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-1.5 pt-2">
-                    {proj.techStack.map((tech: string) => (
-                      <span key={tech} className="px-2.5 py-0.5 rounded-full bg-[#ecefec] text-[#404942] text-[11px] font-medium">
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[#ecefec] flex items-center justify-between text-xs">
-                  <a
-                    href={proj.githubUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 rounded-full bg-[#f7faf7] hover:bg-[#ecefec] text-[#181c1b] font-semibold transition border border-[#c0c9bf] flex items-center gap-1.5"
-                  >
-                    <Github className="w-4 h-4 text-[#134e2f]" />
-                    <span>View GitHub Repo</span>
-                  </a>
-
-                  {proj.liveDemoUrl && (
+                  {safeUrl ? (
                     <a
-                      href={proj.liveDemoUrl}
+                      href={safeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-[#006d3d] hover:underline font-bold flex items-center gap-1"
+                      className="stitch-btn-primary shrink-0 px-4 py-2 text-xs"
                     >
-                      <Globe className="w-3.5 h-3.5" />
-                      <span>Live Demo</span>
+                      View Job
+                      <ExternalLink className="h-3.5 w-3.5" />
                     </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      title="The provider did not supply a valid external listing URL"
+                      className="shrink-0 cursor-not-allowed rounded-full bg-[#f0f2f0] px-3 py-2 text-xs font-semibold text-[#8a918a]"
+                    >
+                      Link Unavailable
+                    </button>
                   )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      )}
-
-      {/* Apply Modal */}
-      {applyingOpp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl border border-[#e2e8e2] relative">
-            <div className="flex items-center justify-between border-b border-[#ecefec] pb-4">
-              <h3 className="font-bold text-lg text-[#181c1b] flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-[#134e2f]" /> {applyingOpp.title}
-              </h3>
-              <button
-                onClick={() => setApplyingOpp(null)}
-                className="p-1.5 rounded-full bg-[#ecefec] text-[#717971] hover:text-[#181c1b]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {appSuccessMsg ? (
-              <div className="py-6 text-center space-y-4">
-                <div className="w-14 h-14 rounded-full bg-[#e8f5e9] text-[#006d3d] flex items-center justify-center mx-auto border border-[#a0d2af]">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h4 className="text-xl font-bold text-[#181c1b]">Application Transmitted!</h4>
-                <p className="text-xs text-[#404942] max-w-sm mx-auto leading-relaxed">
-                  Your academic profile and verified credentials have been transmitted to {applyingOpp.company}.
-                </p>
-                <button
-                  onClick={() => setApplyingOpp(null)}
-                  className="px-6 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white font-bold text-xs transition"
-                >
-                  Done
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                <div className="p-4 rounded-2xl bg-[#f7faf7] border border-[#e2e8e2] space-y-1.5 text-xs">
-                  <p className="text-[#404942]">Organization: <strong className="text-[#181c1b]">{applyingOpp.company}</strong></p>
-                  <p className="text-[#404942]">Package: <strong className="text-[#006d3d]">{applyingOpp.stipendOrSalary}</strong></p>
-                  <p className="text-[#404942]">Location: <strong className="text-[#181c1b]">{applyingOpp.location}</strong></p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#e8f5e9]/70 border border-[#a0d2af]/60 text-xs text-[#1b5e20] space-y-1">
-                  <p className="font-bold flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-[#006d3d]" /> Automatic Academic Transmission
-                  </p>
-                  <p className="text-[11px] opacity-90">
-                    Your semester status, branch specialization, and digital resume will be packaged and submitted securely.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    onClick={() => setApplyingOpp(null)}
-                    className="px-4 py-2 rounded-full bg-[#f7faf7] text-[#404942] font-semibold text-xs border border-[#c0c9bf] hover:bg-[#ecefec]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmApply}
-                    disabled={isSubmittingApp}
-                    className="px-6 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white font-bold text-xs transition shadow-sm flex items-center gap-2 disabled:opacity-50 active:scale-95"
-                  >
-                    <Send className="w-4 h-4 text-[#97f3b5]" />
-                    <span>{isSubmittingApp ? 'Submitting...' : 'Confirm 1-Click Application'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+                </footer>
+              </article>
+            );
+          })}
         </div>
-      )}
-
-      {/* Add Project Modal */}
-      {showAddProjectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl border border-[#e2e8e2] relative">
-            <div className="flex items-center justify-between border-b border-[#ecefec] pb-4">
-              <h3 className="font-bold text-lg text-[#181c1b] flex items-center gap-2">
-                <Code2 className="w-5 h-5 text-[#134e2f]" /> Add GitHub Project to Showcase
-              </h3>
-              <button
-                onClick={() => setShowAddProjectModal(false)}
-                className="p-1.5 rounded-full bg-[#ecefec] text-[#717971] hover:text-[#181c1b]"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddProjectSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#181c1b] mb-1">Project Title</label>
-                <input
-                  type="text"
-                  value={projTitle}
-                  onChange={(e) => setProjTitle(e.target.value)}
-                  placeholder="e.g. Distributed Consensus Engine"
-                  className="w-full px-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#181c1b] mb-1">Description</label>
-                <textarea
-                  value={projDesc}
-                  onChange={(e) => setProjDesc(e.target.value)}
-                  placeholder="Briefly describe your project architecture and features..."
-                  rows={2}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#181c1b] mb-1">Tech Stack (Comma Separated)</label>
-                <input
-                  type="text"
-                  value={projTech}
-                  onChange={(e) => setProjTech(e.target.value)}
-                  placeholder="React, Go, Docker, gRPC"
-                  className="w-full px-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#181c1b] mb-1">GitHub Repo URL</label>
-                <input
-                  type="url"
-                  value={projGithub}
-                  onChange={(e) => setProjGithub(e.target.value)}
-                  placeholder="https://github.com/username/repo"
-                  className="w-full px-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#181c1b] mb-1">Live Demo URL (Optional)</label>
-                <input
-                  type="url"
-                  value={projDemo}
-                  onChange={(e) => setProjDemo(e.target.value)}
-                  placeholder="https://myproject.app"
-                  className="w-full px-4 py-2.5 rounded-full bg-[#f7faf7] border border-[#c0c9bf] text-xs text-[#181c1b] outline-none focus:border-[#134e2f] focus:bg-white"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSavingProj}
-                className="w-full py-3 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white font-bold text-xs transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
-              >
-                {isSavingProj ? 'Saving Project...' : 'Save to Portfolio'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

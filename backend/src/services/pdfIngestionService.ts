@@ -2,6 +2,17 @@ import prisma from '../config/prisma';
 import pdf from 'pdf-parse';
 import { downloadPublicDrivePdf } from './googleDriveService';
 
+
+export class NoReadablePdfTextError extends Error {
+    constructor() {
+        super(
+            'No readable text found in the PDF. It may be scanned or image-only.'
+        );
+        this.name = 'NoReadablePdfTextError';
+    }
+}
+
+
 export interface ExtractedPdfText {
     text: string;
     pageCount: number;
@@ -19,9 +30,7 @@ export const extractPdfText = async (
     const text = result.text?.trim();
 
     if (!text) {
-        throw new Error(
-            'No readable text found in the PDF. It may be scanned or image-only.'
-        );
+        throw new NoReadablePdfTextError();
     }
 
     return {
@@ -43,6 +52,7 @@ export const splitTextIntoChunks = (
     }
 
     const normalizedText = text
+        .replace(/\u0000/g, '') // Remove null characters that PostgreSQL cannot store
         .replace(/\r\n/g, '\n')
         .replace(/[ \t]+/g, ' ')
         .replace(/\n{3,}/g, '\n\n')

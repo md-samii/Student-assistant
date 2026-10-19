@@ -75,7 +75,7 @@ export const ReportsAnalytics: React.FC = () => {
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold uppercase tracking-wider mb-2">
             <Sparkles className="w-3.5 h-3.5 text-[#006d3d]" /> Telemetry &amp; Institutional Audits
           </div>
-          <h1 className="text-3xl font-extrabold text-[#181c1b] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#181c1b] tracking-tight">
             Institutional Intelligence &amp; Analytics
           </h1>
           <p className="text-sm text-[#404942] max-w-3xl mt-1">

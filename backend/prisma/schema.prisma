@@ -28,6 +28,7 @@ model User {
   chatHistories      ChatHistory[]
   documents          Document[]
   quizSubmissions    QuizSubmission[]
+  createdQuizzes     Quiz[]              @relation("QuizCreator")
   skills             Skill[]
   projects           Project[]
   notifications      Notification[]
@@ -35,6 +36,9 @@ model User {
   learningActivities LearningActivity[]
   studySessions      StudySession[]
   activeStudySession ActiveStudySession?
+  videoProgress      VideoProgress[]
+  resumeAnalyses     ResumeAnalysis[]
+  opportunityApplications OpportunityApplication[]
 
   @@map("users")
 }
@@ -71,8 +75,9 @@ model Subject {
   semester    Int
   description String?
 
-  resources StudyResource[]
-  quizzes   Quiz[]
+  resources       StudyResource[]
+  quizzes         Quiz[]
+  quizSubmissions QuizSubmission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,11 +104,15 @@ model StudyResource {
 }
 
 model Quiz {
-  id           String  @id @default(uuid())
-  title        String
-  description  String?
-  subjectId    String
-  subject      Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  subjectId   String
+  subject     Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  creatorId String?
+  creator   User?   @relation("QuizCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+
   moduleNumber Int?
   timeLimitMin Int?
   totalMarks   Int
@@ -114,6 +123,7 @@ model Quiz {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([creatorId])
   @@map("quizzes")
 }
 
@@ -131,8 +141,8 @@ model QuizQuestion {
 
 model QuizSubmission {
   id          String   @id @default(uuid())
-  quizId      String
-  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId      String?
+  quiz        Quiz?    @relation(fields: [quizId], references: [id], onDelete: Cascade)
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   score       Int
@@ -140,6 +150,14 @@ model QuizSubmission {
   answers     String // JSON stringified answers
   submittedAt DateTime @default(now())
 
+  // Fields for on-demand practice attempts (where quiz is temporary and not persisted)
+  subjectId    String?
+  subject      Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  moduleNumber Int?
+  timeTakenSec Int?
+  isPractice   Boolean  @default(false)
+
+  @@index([userId, submittedAt])
   @@map("quiz_submissions")
 }
 
@@ -166,9 +184,11 @@ model Document {
   storagePath String // Firebase path
   fileSize    Int
   mimeType    String
+  fileData    Bytes?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  resumeAnalyses ResumeAnalysis[]
 
   @@map("documents")
 }
@@ -330,3 +350,136 @@ model ResourceChunk {
   @@index([resourceId])
   @@map("resource_chunks")
 }
+
+model VideoProgress {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  youtubeVideoId String
+  title          String
+  thumbnailUrl   String?
+  channelTitle   String?
+  subjectCode    String?
+  moduleNumber   Int?
+  status         String   @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  isFavorite     Boolean  @default(false)
+  lastWatchedAt  DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, youtubeVideoId])
+  @@index([userId, status])
+  @@index([userId, isFavorite])
+  @@map("video_progress")
+}
+
+model Opportunity {
+  id               String    @id @default(uuid())
+  provider         String    // 'ADZUNA', 'GREENHOUSE', 'CAMPUS_VTU', 'GOVT_NATIONAL_PORTAL'
+  externalId       String?   // External listing ID from provider
+  title            String
+  company          String
+  logoUrl          String?
+  category         String    // 'INTERNSHIP' | 'JOB' | 'GOVT_EXAM'
+  description      String    @db.Text
+  requiredSkills   String    @db.Text // JSON stringified array
+  preferredSkills  String?   @db.Text // JSON stringified array
+  eligibleBranches String?   @db.Text // JSON stringified array
+  eligibleSemesters String?  @db.Text // JSON stringified array
+  location         String
+  isRemote         Boolean   @default(false)
+  employmentType   String    @default("FULL_TIME") // 'FULL_TIME' | 'INTERNSHIP' | 'PART_TIME' | 'CONTRACT'
+  salaryRange      String?   // Verified salary/stipend or null
+  applyUrl         String
+  deadline         DateTime?
+  postedAt         DateTime?
+  firstSeenAt      DateTime  @default(now())
+  lastCheckedAt    DateTime  @default(now())
+  status           String    @default("ACTIVE") // 'ACTIVE' | 'STALE' | 'EXPIRED'
+  sourceProvenance String?   @db.Text // Source notes, attribution, or feed details
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  applications     OpportunityApplication[]
+
+  @@unique([provider, externalId])
+  @@index([category, status])
+  @@index([lastCheckedAt])
+  @@map("opportunities")
+}
+
+model OpportunitySyncLog {
+  id           String   @id @default(uuid())
+  provider     String
+  status       String   // 'SUCCESS' | 'PARTIAL' | 'FAILED'
+  itemsFetched Int      @default(0)
+  itemsCreated Int      @default(0)
+  itemsUpdated Int      @default(0)
+  message      String?  @db.Text
+  startedAt    DateTime @default(now())
+  completedAt  DateTime @default(now())
+
+  @@index([provider, startedAt])
+  @@map("opportunity_sync_logs")
+}
+
+model OpportunityApplication {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  appliedAt     DateTime    @default(now())
+  status        String      @default("SUBMITTED")
+
+  @@unique([userId, opportunityId])
+  @@index([userId])
+  @@map("opportunity_applications")
+}
+
+model ResumeAnalysis {
+  id                 String    @id @default(uuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId         String?
+  document           Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  resumeName         String
+  extractedText      String    @db.Text
+  pageCount          Int       @default(1)
+
+  // Overall & Rubric Scores (0 - 100)
+  overallScore       Int
+  parsingScore       Int       // Parsing & formatting quality (max 20)
+  sectionScore       Int       // Completeness & clarity of sections (max 25)
+  skillsScore        Int       // Relevance & depth of skills (max 20)
+  experienceScore    Int       // Quality of projects & experience (max 25)
+  formattingScore    Int       // ATS structure & readability (max 10)
+
+  // Detailed Extraction (JSON stringified)
+  contactInfo        String    @db.Text
+  summary            String?   @db.Text
+  education          String    @db.Text
+  skills             String    @db.Text
+  experience         String    @db.Text
+  projects           String    @db.Text
+  certifications     String    @db.Text
+
+  // Actionable Improvement Report (JSON stringified)
+  issues             String    @db.Text
+
+  // ATS Checklist (JSON stringified)
+  checklist          String    @db.Text
+
+  // Optional Target Job Alignment
+  targetJobTitle     String?
+  targetJobDesc      String?   @db.Text
+  targetMatchScore   Int?
+  targetMatchDetails String?   @db.Text
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@map("resume_analyses")
+}
+

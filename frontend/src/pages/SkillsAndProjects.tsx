@@ -216,7 +216,7 @@ export const SkillsAndProjects: React.FC = () => {
             <span className="text-[#717971] text-xs">•</span>
             <span className="text-xs text-[#717971]">Verified Artifacts Vault</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-[#181c1b] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#181c1b] tracking-tight">
             Skills Matrix &amp; Project Portfolio
           </h1>
           <p className="text-sm text-[#404942] max-w-3xl mt-1">

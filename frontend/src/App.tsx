@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import LandingPage from './pages/LandingPage';
@@ -11,21 +13,22 @@ import VideoRecommendations from './pages/VideoRecommendations';
 import QuizSystem from './pages/QuizSystem';
 import DocumentLocker from './pages/DocumentLocker';
 import CareersAndOpportunities from './pages/CareersAndOpportunities';
+import ResumeAnalyzer from './pages/ResumeAnalyzer';
 import AdminDashboard from './pages/AdminDashboard';
 import { SkillsAndProjects } from './pages/SkillsAndProjects';
-import { NotificationDropdown } from './components/NotificationDropdown';
 import { SemesterUpgradeModal } from './components/SemesterUpgradeModal';
 import { ReportsAnalytics } from './pages/ReportsAnalytics';
 import { Settings } from './pages/Settings';
+import AnimatedAcademicBackground from './components/AnimatedAcademicBackground';
 import { api } from './services/api';
 import {
   Bot,
   BookOpen,
   LayoutDashboard,
   FileText,
+  FileCheck,
   Briefcase,
   GraduationCap,
-  Sparkles,
   CheckCircle2,
   Lock,
   LogOut,
@@ -38,16 +41,11 @@ import {
   Youtube,
   Award,
   ShieldCheck,
-  Search,
-  Bell,
-  Mail,
   TrendingUp,
   Menu,
   X,
   Code2,
   BarChart3,
-  Settings as SettingsIcon,
-  HelpCircle,
   Plus,
   ArrowUpRight,
   Video,
@@ -114,6 +112,9 @@ const DashboardContent = () => {
 
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(true);
+
+  const [lastWatchedVideo, setLastWatchedVideo] = useState<any>(null);
+  const [isLoadingLastWatched, setIsLoadingLastWatched] = useState(true);
 
   const [currentStreak, setCurrentStreak] = useState(0);
   const [totalThisWeek, setTotalThisWeek] = useState(0);
@@ -213,6 +214,30 @@ const DashboardContent = () => {
   }, []);
 
   useEffect(() => {
+    const fetchLastWatchedVideo = async () => {
+      try {
+        setIsLoadingLastWatched(true);
+        const res = await api.get('/videos/user/library');
+        const tracked = res.data?.data?.tracked || [];
+        if (tracked.length > 0) {
+          const sorted = [...tracked].sort((a: any, b: any) => {
+            const dateA = a.lastWatchedAt ? new Date(a.lastWatchedAt).getTime() : 0;
+            const dateB = b.lastWatchedAt ? new Date(b.lastWatchedAt).getTime() : 0;
+            return dateB - dateA;
+          });
+          setLastWatchedVideo(sorted[0]);
+        }
+      } catch (err) {
+        console.warn('Failed to load last watched video:', err);
+      } finally {
+        setIsLoadingLastWatched(false);
+      }
+    };
+
+    fetchLastWatchedVideo();
+  }, []);
+
+  useEffect(() => {
     fetchWeeklyActivity();
   }, []);
 
@@ -243,6 +268,8 @@ const DashboardContent = () => {
       });
     } catch (error) {
       console.error('Failed to load weekly activity:', error);
+    } finally {
+      setIsLoadingActivity(false);
     }
   };
 
@@ -381,11 +408,7 @@ const DashboardContent = () => {
       {/* Top Section: Title & Actions Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e8f5e9] text-[#1b5e20] text-xs font-semibold mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#006d3d] animate-pulse"></span>
-            <span>● Live Sync • {university}</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#181c1b] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#181c1b] tracking-tight">
             Academic Sanctuary
           </h1>
           <p className="text-xs sm:text-sm text-[#404942] mt-1">
@@ -395,15 +418,8 @@ const DashboardContent = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/skills')}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-semibold shadow-sm transition active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Task</span>
-          </button>
-          <button
             onClick={() => setIsUpgradeModalOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-[#c0c9bf] text-[#181c1b] text-xs font-semibold shadow-sm transition active:scale-95"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white text-xs font-semibold shadow-sm hover:shadow-md transition active:scale-95 cursor-pointer"
           >
             <span>Upgrade Semester</span>
           </button>
@@ -511,34 +527,80 @@ const DashboardContent = () => {
           </div>
         </div>
 
-        {/* Card 4: Career Opportunities */}
-        <div className="stitch-card p-5 sm:p-6 flex flex-col justify-between group">
+        {/* Card 4: Last Video Watched */}
+        <div
+          onClick={() => navigate('/videos')}
+          className="stitch-card p-5 sm:p-6 flex flex-col justify-between group cursor-pointer hover:border-[#134e2f]/40 transition relative overflow-hidden"
+        >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-semibold text-[#404942]">Career Matches</span>
+            <span className="text-xs font-semibold text-[#404942]">Last Video Watched</span>
             <button
-              onClick={() => navigate('/careers')}
-              className="w-8 h-8 rounded-full border border-[#c0c9bf] flex items-center justify-center text-[#404942] hover:bg-[#f0f4f0] transition"
-              title="View Internships"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/videos');
+              }}
+              className="w-8 h-8 rounded-full border border-[#c0c9bf] flex items-center justify-center text-[#404942] group-hover:bg-[#134e2f] group-hover:text-white group-hover:border-[#134e2f] transition"
+              title="Continue Watching"
             >
-              <ArrowUpRight className="w-4 h-4" />
+              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
             </button>
           </div>
 
-          <div className="my-3">
-            <span className="text-3xl sm:text-4xl font-extrabold text-[#181c1b] tracking-tight">
-              {isLoadingDashboard
-                ? 'Loading...'
-                : `${dashboardData?.careers?.internships ?? 0} Internships`}
-            </span>
+          <div className="my-2.5">
+            {isLoadingLastWatched ? (
+              <div className="space-y-1.5 py-1">
+                <div className="h-5 w-3/4 bg-gray-200 animate-pulse rounded"></div>
+                <div className="h-3.5 w-1/2 bg-gray-100 animate-pulse rounded"></div>
+              </div>
+            ) : lastWatchedVideo ? (
+              <div className="flex items-center gap-3">
+                {lastWatchedVideo.thumbnailUrl && (
+                  <div className="relative w-14 h-10 sm:w-16 sm:h-11 rounded-xl overflow-hidden shrink-0 border border-gray-200/80 shadow-sm bg-black/5">
+                    <img
+                      src={lastWatchedVideo.thumbnailUrl}
+                      alt={lastWatchedVideo.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <Play className="w-3 h-3 text-white fill-white" />
+                    </div>
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs sm:text-sm font-bold text-[#181c1b] tracking-tight truncate group-hover:text-[#134e2f] transition" title={lastWatchedVideo.title}>
+                    {lastWatchedVideo.title}
+                  </h4>
+                  <p className="text-[11px] text-[#717971] truncate mt-0.5">
+                    {lastWatchedVideo.channelTitle || (lastWatchedVideo.subjectCode ? `VTU • ${lastWatchedVideo.subjectCode}` : 'Video Lecture')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <span className="text-xs sm:text-sm font-bold text-[#181c1b] block">
+                  No video watched yet
+                </span>
+                <span className="text-[11px] text-[#717971] mt-0.5 block">
+                  Explore recommended syllabus lectures
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
-            <Clock className="w-3.5 h-3.5" />
-            <span>
-              {isLoadingDashboard
-                ? 'Loading...'
-                : `${dashboardData?.careers?.deadlinesThisWeek ?? 0} Deadlines this week`}
-            </span>
+          <div className="flex items-center gap-1.5 text-xs text-[#006d3d] font-semibold">
+            {lastWatchedVideo ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-[#134e2f] animate-pulse"></span>
+                <span>
+                  {lastWatchedVideo.progressStatus === 'COMPLETED' ? 'Completed • Watch again' : 'In Progress • Resume'}
+                </span>
+              </>
+            ) : (
+              <>
+                <Youtube className="w-3.5 h-3.5 text-rose-600" />
+                <span className="text-rose-700">Browse Video Recommendations</span>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -555,12 +617,6 @@ const DashboardContent = () => {
               <p className="text-xs text-gray-400 mt-0.5">
                 Study and coursework consistency
               </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                {isLoadingActivity ? '...' : `${totalThisWeek} activities`}
-              </span>
             </div>
           </div>
 
@@ -960,37 +1016,37 @@ function AppLayout() {
     { path: '/quizzes', label: 'Practice Quiz', icon: Award },
     { path: '/ai-assistant', label: 'AI Assistant', icon: Bot },
     { path: '/careers', label: 'Careers and Opportunities', icon: Briefcase },
+    { path: '/resume-analyzer', label: 'Resume Analyzer', icon: FileCheck },
     { path: '/locker', label: 'Document Locker', icon: FileText },
   ];
 
-  const generalNavItems = [
-    { path: '/settings', label: 'Settings', icon: SettingsIcon },
-    { path: '/profile', label: 'Help', icon: HelpCircle },
-  ];
+
 
   if (!isAuthenticated && (location.pathname === '/' || location.pathname === '/landing')) {
     return <LandingPage />;
   }
 
+  const isAuthPage = !isAuthenticated && (location.pathname === '/login' || location.pathname === '/register');
+
   return (
-    <div className="min-h-screen flex bg-[#f7faf7] text-[#181c1b] font-sans selection:bg-[#97f3b5] selection:text-[#00361c]">
+    <div className={`min-h-screen ${isAuthPage ? 'h-screen max-h-screen overflow-hidden' : ''} flex flex-col bg-[#f7faf7] text-[#181c1b] font-sans selection:bg-[#97f3b5] selection:text-[#00361c]`}>
+      {isAuthPage && <AnimatedAcademicBackground />}
       {/* Student Assistant Left Sidebar */}
       {isAuthenticated && (
         <aside className="fixed left-0 top-0 h-full z-40 hidden lg:flex flex-col w-64 bg-white border-r border-[#e2e8e2] shadow-sm p-6 overflow-y-auto">
           {/* Brand Logo Header */}
-          <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="w-10 h-10 rounded-full bg-[#134e2f] text-white flex items-center justify-center shadow-sm shrink-0">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-base text-[#00361c] tracking-tight leading-none">
-                Student Assistant
-              </span>
-              <span className="text-[10px] text-[#404942] font-semibold mt-1">
-                Academic & Career Suite
-              </span>
-            </div>
-          </div>
+          <Link to="/" className="flex items-center mb-7 px-1 group">
+            <img
+              src="/logo.png"
+              alt="Student Assistant"
+              className="w-[200px] h-auto object-contain object-left dark:hidden transition-transform duration-200 group-hover:scale-[1.02]"
+            />
+            <img
+              src="/logo-dark.png"
+              alt="Student Assistant"
+              className="w-[200px] h-auto object-contain object-left hidden dark:block transition-transform duration-200 group-hover:scale-[1.02]"
+            />
+          </Link>
 
           {/* MENU Section */}
           <div className="mb-6">
@@ -1006,16 +1062,16 @@ function AppLayout() {
                     key={item.path + item.label}
                     to={item.path}
                     className={`relative flex items-center justify-between px-3 py-2.5 rounded-full text-xs font-semibold transition-all duration-150 ${isActive
-                      ? 'text-[#00361c] font-bold bg-[#e8f5e9]'
-                      : 'text-[#404942] hover:text-[#00361c] hover:bg-[#f0f4f0]'
+                      ? 'text-[#00361c] dark:text-[#86D5A4] font-bold bg-[#e8f5e9] dark:bg-[#22332A]'
+                      : 'text-[#404942] dark:text-[#BAC8BE] hover:text-[#00361c] dark:hover:text-[#86D5A4] hover:bg-[#f0f4f0] dark:hover:bg-[#22332A]'
                       }`}
                   >
                     {/* Active vertical green indicator bar */}
                     {isActive && (
-                      <span className="absolute -left-6 top-2 bottom-2 w-1.5 rounded-r-full bg-[#134e2f]"></span>
+                      <span className="absolute -left-6 top-2 bottom-2 w-1.5 rounded-r-full bg-[#134e2f] dark:bg-[#86D5A4]"></span>
                     )}
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#134e2f]' : 'text-gray-400'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#134e2f] dark:text-[#86D5A4]' : 'text-gray-400 dark:text-[#91A397]'}`} />
                       <span>{item.label}</span>
                     </div>
                   </Link>
@@ -1024,189 +1080,127 @@ function AppLayout() {
             </nav>
           </div>
 
-          {/* GENERAL Section */}
-          <div className="mb-6">
-            <h6 className="text-[11px] font-bold text-[#717971] uppercase tracking-wider px-3 mb-2">
-              General
-            </h6>
-            <nav className="space-y-1">
-              {generalNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-full text-xs font-semibold transition-all duration-150 ${isActive
-                      ? 'text-[#00361c] font-bold bg-[#e8f5e9]'
-                      : 'text-[#404942] hover:text-[#00361c] hover:bg-[#f0f4f0]'
-                      }`}
-                  >
-                    <Icon className="w-4 h-4 text-gray-400" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-              <button
-                onClick={logout}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-full text-xs font-semibold text-[#404942] hover:text-rose-600 hover:bg-rose-50/50 transition"
-              >
-                <LogOut className="w-4 h-4 text-gray-400" />
-                <span>Logout</span>
-              </button>
-            </nav>
-          </div>
-
-          {/* Bottom Card: Academic Syllabus Sync */}
-          <div className="mt-auto pt-2">
-            <div className="rounded-2xl bg-[#134e2f] p-4 text-white relative overflow-hidden shadow-sm">
-              <div className="relative z-10 space-y-2">
-                <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white">
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
-                </div>
-                <h5 className="font-bold text-xs leading-snug">VTU Syllabus Sync Active</h5>
-                <p className="text-[11px] text-emerald-100/80">Semester {profile?.semester || 6} Engineering</p>
-                <button
-                  onClick={() => navigate('/profile')}
-                  className="w-full mt-2 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-[11px] font-bold text-white border border-white/20 transition text-center block"
-                >
-                  Manage Academic Profile
-                </button>
+          {/* Bottom Section - Pinned to bottom: Profile & Logout */}
+          <div className="mt-auto pt-4 border-t border-[#e2e8e2] space-y-1">
+            <Link
+              to="/profile"
+              className="flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-[#f0f4f0] transition group cursor-pointer"
+            >
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#134e2f] to-[#2e8b57] text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-white shrink-0">
+                {studentName ? studentName[0] : 'S'}
               </div>
-            </div>
+              <div className="text-left overflow-hidden min-w-0">
+                <p className="text-xs font-bold text-[#181c1b] leading-tight truncate group-hover:text-[#134e2f] transition">{studentName || 'Student'}</p>
+                <p className="text-[10px] text-[#717971] font-mono leading-tight truncate">{studentEmail}</p>
+              </div>
+            </Link>
+
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-2xl text-xs font-semibold text-[#404942] hover:text-rose-600 hover:bg-rose-50/60 transition group cursor-pointer"
+            >
+              <div className="w-9 h-9 rounded-full bg-[#f0f4f0] group-hover:bg-rose-100/70 text-[#717971] group-hover:text-rose-600 flex items-center justify-center shrink-0 transition">
+                <LogOut className="w-4 h-4" />
+              </div>
+              <span className="font-semibold text-xs leading-tight">Logout</span>
+            </button>
           </div>
         </aside>
       )}
 
       {/* Main Wrapper */}
-      <div className={`flex-1 flex flex-col min-h-screen ${isAuthenticated ? 'lg:ml-64' : ''}`}>
-        {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 bg-[#f7faf7]/90 backdrop-blur-md px-6 py-4 border-b border-[#e2e8e2]">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-
-            {/* Left: Mobile Toggle & Search Bar */}
-            <div className="flex items-center gap-4 flex-1">
-              {isAuthenticated && (
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="lg:hidden p-2 rounded-full bg-white border border-[#c0c9bf] text-[#181c1b] shadow-sm"
-                >
-                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </button>
-              )}
-
-              {!isAuthenticated && (
-                <Link to="/" className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#134e2f] flex items-center justify-center text-white shadow-sm">
-                    <GraduationCap className="w-4 h-4" />
-                  </div>
-                  <span className="font-extrabold text-base text-[#181c1b]">
-                    Student <span className="text-[#134e2f]">Assistant</span>
-                  </span>
-                </Link>
-              )}
-
-              {/* Pill Search Input */}
-              {isAuthenticated && (
-                <div className="hidden sm:flex items-center max-w-sm w-full">
-                  <div className="relative w-full flex items-center">
-                    <Search className="w-4 h-4 absolute left-3.5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search coursework, quizzes, roadmaps..."
-                      className="w-full pl-10 pr-12 py-2 rounded-full bg-white border border-[#c0c9bf] text-xs text-[#181c1b] placeholder-gray-400 focus:outline-none focus:border-[#134e2f] focus:ring-1 focus:ring-[#134e2f] shadow-sm transition"
-                    />
-                    <div className="absolute right-3 px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 text-[10px] font-mono font-medium text-gray-400">
-                      ⌘F
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right: Message, Notification & Profile */}
-            <div className="flex items-center gap-3">
-              {isAuthenticated ? (
-                <>
-                  {/* Messages Icon Button */}
-                  <button
-                    onClick={() => navigate('/ai-assistant')}
-                    className="p-2.5 rounded-full bg-white hover:bg-[#f0f4f0] border border-[#c0c9bf] text-[#181c1b] transition shadow-sm"
-                    title="Messages / Assistant"
-                  >
-                    <Mail className="w-4 h-4 text-[#134e2f]" />
-                  </button>
-
-                  {/* Notification Dropdown */}
-                  <NotificationDropdown />
-
-                  {/* User Profile Pill with Avatar */}
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-full hover:bg-white/80 transition"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#134e2f] to-[#2e8b57] text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-white">
-                      {studentName ? studentName[0] : 'S'}
-                    </div>
-                    <div className="hidden sm:block text-left">
-                      <p className="text-xs font-bold text-[#181c1b] leading-tight">{studentName}</p>
-                      <p className="text-[10px] text-[#404942] font-mono leading-tight">{studentEmail}</p>
-                    </div>
-                  </Link>
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Link
-                    to="/login"
-                    className="px-5 py-2 text-xs font-semibold rounded-full bg-white hover:bg-[#f0f4f0] text-[#181c1b] border border-[#c0c9bf] shadow-sm transition"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="px-5 py-2 text-xs font-semibold rounded-full bg-[#134e2f] hover:bg-[#0e3b24] text-white shadow-sm transition"
-                  >
-                    Register
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile Drawer Menu */}
-          {isAuthenticated && mobileMenuOpen && (
-            <div className="lg:hidden mt-3 p-4 rounded-2xl bg-white border border-[#e2e8e2] shadow-lg grid grid-cols-2 gap-2 animate-fade-in">
-              {menuNavItems.concat(generalNavItems).map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path + item.label}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-semibold transition ${isActive
-                      ? 'bg-[#134e2f] text-white'
-                      : 'text-[#181c1b] hover:bg-[#f0f4f0]'
-                      }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
+      <div className={`flex-1 flex flex-col ${isAuthPage ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen'} ${isAuthenticated ? 'lg:ml-64' : ''}`}>
+        {/* Top Header Bar - Only on mobile when authenticated, or full width when unauthenticated */}
+        {isAuthenticated ? (
+          <header className="lg:hidden sticky top-0 z-30 bg-[#f7faf7]/90 backdrop-blur-md px-4 py-3 border-b border-[#e2e8e2]">
+            <div className="flex items-center justify-between">
               <button
-                onClick={logout}
-                className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-rose-50 text-rose-600 text-xs font-bold mt-2"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-full bg-white border border-[#c0c9bf] text-[#181c1b] shadow-sm cursor-pointer"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
+
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="Student Assistant" className="w-[140px] h-auto object-contain dark:hidden" />
+                <img src="/logo-dark.png" alt="Student Assistant" className="w-[140px] h-auto object-contain hidden dark:block" />
+              </div>
+
+              <Link
+                to="/profile"
+                className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#134e2f] to-[#2e8b57] text-white flex items-center justify-center font-bold text-xs shadow-sm"
+              >
+                {studentName ? studentName[0] : 'S'}
+              </Link>
             </div>
-          )}
-        </header>
+
+            {/* Mobile Drawer Menu */}
+            {mobileMenuOpen && (
+              <div className="mt-3 p-4 rounded-2xl bg-white border border-[#e2e8e2] shadow-lg grid grid-cols-2 gap-2 animate-fade-in">
+                {menuNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path + item.label}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-semibold transition ${isActive
+                        ? 'bg-[#134e2f] text-white'
+                        : 'text-[#181c1b] hover:bg-[#f0f4f0]'
+                        }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+                <button
+                  onClick={logout}
+                  className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-rose-50 text-rose-600 text-xs font-bold mt-2 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </header>
+        ) : (
+          <header className="w-full bg-transparent px-6 lg:px-12 py-3 border-none relative z-30">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+              <Link to="/" className="flex items-center gap-2.5">
+                <img src="/logo.png" alt="Student Assistant" className="w-[190px] sm:w-[210px] h-auto object-contain dark:hidden" />
+                <img src="/logo-dark.png" alt="Student Assistant" className="w-[190px] sm:w-[210px] h-auto object-contain hidden dark:block" />
+              </Link>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className={`px-5 py-2 text-xs font-semibold rounded-full shadow-sm transition ${
+                    location.pathname === '/login'
+                      ? 'bg-[#134e2f] hover:bg-[#0e3b24] text-white'
+                      : 'bg-white hover:bg-[#f0f4f0] text-[#181c1b] border border-[#c0c9bf]'
+                  }`}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className={`px-5 py-2 text-xs font-semibold rounded-full shadow-sm transition ${
+                    location.pathname === '/login'
+                      ? 'bg-white hover:bg-[#f0f4f0] text-[#181c1b] border border-[#c0c9bf]'
+                      : 'bg-[#134e2f] hover:bg-[#0e3b24] text-white'
+                  }`}
+                >
+                  Register
+                </Link>
+              </div>
+            </div>
+          </header>
+        )}
 
         {/* Main Content Area */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-4">
+        <main className={`flex-1 w-full mx-auto ${isAuthPage ? 'px-4 py-0 flex flex-col justify-center max-w-5xl overflow-hidden' : 'max-w-7xl px-6 py-6'}`}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -1278,6 +1272,14 @@ function AppLayout() {
               }
             />
             <Route
+              path="/resume-analyzer"
+              element={
+                <ProtectedRoute>
+                  <ResumeAnalyzer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/skills"
               element={
                 <ProtectedRoute>
@@ -1312,15 +1314,6 @@ function AppLayout() {
           </Routes>
         </main>
 
-        {/* Minimal Footer */}
-        <footer className="py-6 text-center text-xs text-[#404942] bg-transparent border-t border-[#e2e8e2]/60">
-          <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>© 2026 Student Assistant — Academic & Career Intelligence Engine.</p>
-            <p className="flex items-center gap-2 font-mono text-gray-500">
-              <Lock className="w-3.5 h-3.5 text-[#006d3d]" /> Protected Student Cloud System
-            </p>
-          </div>
-        </footer>
       </div>
     </div>
   );
@@ -1328,8 +1321,12 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppLayout />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ConfirmProvider>
+          <AppLayout />
+        </ConfirmProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
