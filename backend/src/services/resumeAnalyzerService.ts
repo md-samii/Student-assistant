@@ -9,6 +9,7 @@ import {
   ExtractedSkillsPayload,
   DOMAIN_RECOMMENDED_SKILLS,
 } from './skillExtractorService';
+import { generateWithRetry } from '../utils/gemini';
 
 export interface ActionableIssue {
   id: string;
@@ -556,10 +557,7 @@ CRITICAL RULES:
 3. Return ONLY valid JSON, no markdown backticks, no comments.
 `;
 
-    const response = await gemini.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
-      contents: prompt,
-    });
+    const response = await generateWithRetry(gemini, { contents: prompt });
 
     const rawText = response.text?.trim() || '';
     const cleanJson = rawText.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();

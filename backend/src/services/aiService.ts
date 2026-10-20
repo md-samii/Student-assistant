@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import prisma from '../config/prisma';
 import { ingestGoogleDriveResource } from './pdfIngestionService';
+import { generateWithRetry } from '../utils/gemini';
 
 
 
@@ -451,8 +452,7 @@ Instructions:
 Use empty strings and empty arrays for inapplicable fields.
 `;
 
-      const response = await gemini.models.generateContent({
-        model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+      const response = await generateWithRetry(gemini, {
         contents: question,
         config: {
           systemInstruction: systemPrompt,

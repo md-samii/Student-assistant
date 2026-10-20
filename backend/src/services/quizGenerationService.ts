@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import prisma from '../config/prisma';
+import { generateWithRetry } from '../utils/gemini';
 
 export interface GeneratedQuestion {
     id?: string;
@@ -136,8 +137,7 @@ Return only valid JSON in this format:
 }
 `;
 
-    const response = await gemini.models.generateContent({
-        model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    const response = await generateWithRetry(gemini, {
         contents: prompt,
         config: {
             responseMimeType: 'application/json',

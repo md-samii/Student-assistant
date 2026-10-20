@@ -464,17 +464,14 @@ export const generatePracticeQuiz = async (
       },
     });
   } catch (error: any) {
-    console.error('generatePracticeQuiz Error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to generate practice quiz.';
-    const status = message.includes('not found')
-      ? 404
-      : message.includes('required') || message.includes('must be') || message.includes('between')
-      ? 400
-      : 500;
-    return res.status(status).json({
-      status: 'error',
-      message,
-    });
+    const msg = String((error as any)?.message || error);
+    if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
+      return res.status(429).json({ message: 'AI limit reached. Try again in a few minutes.' });
+    }
+    if (msg.includes('503') || msg.includes('UNAVAILABLE')) {
+      return res.status(503).json({ message: 'AI is busy. Please try again in a minute.' });
+    }
+    return res.status(500).json({ message: 'Could not generate the quiz. Please try again.' });
   }
 };
 
